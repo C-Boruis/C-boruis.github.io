@@ -274,6 +274,7 @@ class DashboardApp {
         }
 
         const inputHash = await this.hashPassword(password);
+        console.log("입력된 암호:", inputHash, "저장된 암호:", this.state.account.passwordHash);
         if (username === this.state.account.username && inputHash === this.state.account.passwordHash) {
             this.showNotification(`환영합니다, ${username}님!`, "success");
             this.showDashboard();
@@ -602,7 +603,7 @@ class DashboardApp {
     //    document.addEventListener('keydown', e => {
     //        if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C'))) {
     //           e.preventDefault();
-    //        }
+    //       }
     //    });
     }
 
