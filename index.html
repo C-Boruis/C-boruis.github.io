@@ -3,647 +3,93 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Christian Boruis Web</title>
-    <!-- Tailwind CSS for styling -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        /* Custom font */
-        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap');
-        body {
-            font-family: 'Noto Sans KR', sans-serif;
-        }
-        /* Hide scrollbar for the main body but allow scrolling */
-        body::-webkit-scrollbar {
-            display: none;
-        }
-        body {
-            -ms-overflow-style: none;  /* IE and Edge */
-            scrollbar-width: none;  /* Firefox */
-        }
-        /* Tab Styles */
-        .tab-button {
-            transition: background-color 0.2s, color 0.2s;
-        }
-        .tab-button.active {
-            background-color: white;
-            border-bottom-color: white;
-            color: #2b6cb0;
-        }
-        .tab-content-pane {
-            display: none;
-        }
-        .tab-content-pane.active {
-            display: block;
-        }
-    </style>
+    <title>Personal Dashboard</title>
+    
+    <!-- Stylesheet Link -->
+    <link rel="stylesheet" href="css/style.css">
+    
+    <!-- Font Awesome for Icons (e.g., search, settings icons) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    
+    <!-- Main JavaScript File (type="module" allows import/export) -->
+    <script src="js/main.js" type="module" defer></script>
 </head>
-<body class="bg-gray-100">
+<body>
 
-    <!-- Login Screen -->
-    <div id="login-screen" class="flex items-center justify-center h-screen">
-        <div class="w-full max-w-md p-8 space-y-6 bg-white rounded-xl shadow-lg">
-            <h2 class="text-3xl font-bold text-center text-gray-800">Christian Boruis Web</h2>
-            <p class="text-center text-gray-500">로그인이 필요합니다.</p>
-            <form id="login-form" class="space-y-6">
-                <div>
-                    <label for="username" class="text-sm font-bold text-gray-600 block">아이디</label>
-                    <input type="text" id="username" class="w-full p-3 mt-2 text-gray-700 bg-gray-200 rounded-lg focus:outline-none focus:bg-white focus:ring-2 focus:ring-blue-500" required>
-                </div>
-                <div>
-                    <label for="password" class="text-sm font-bold text-gray-600 block">패스워드</label>
-                    <input type="password" id="password" class="w-full p-3 mt-2 text-gray-700 bg-gray-200 rounded-lg focus:outline-none focus:bg-white focus:ring-2 focus:ring-blue-500" required>
-                </div>
-                <div>
-                    <button type="submit" class="w-full py-3 mt-4 font-bold text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                        로그인
-                    </button>
-                </div>
-            </form>
-            <p id="error-message" class="text-center text-red-500 text-sm hidden">아이디 또는 패스워드가 올바르지 않습니다.</p>
+    <!-- Screen 1: Login Screen (Initially Visible) -->
+    <div id="login-screen" class="screen">
+        <div class="login-box">
+            <!-- This area will show the user-customized welcome message and image -->
+            <div id="login-preview">
+                <h1>환영합니다</h1>
+            </div>
+            <input type="text" id="username" placeholder="아이디">
+            <input type="password" id="password" placeholder="비밀번호">
+            <button id="login-btn">로그인</button>
         </div>
     </div>
 
-    <!-- Main Content (Initially Hidden) -->
-    <div id="main-content" class="hidden">
-        <header id="main-header" class="bg-white shadow-md p-4">
-            <h1 id="main-header-title" class="text-2xl font-bold text-gray-800">Christian Boruis Web</h1>
+    <!-- Screen 2: Main Dashboard (Initially Hidden) -->
+    <div id="main-app" class="screen" style="display: none;">
+        <!-- Top Header Section -->
+        <header id="app-header">
+            <div class="header-left">
+                <h1 class="dashboard-title">My Dashboard</h1>
+            </div>
+            <div class="header-right">
+                <div id="weather-widget" class="header-item">--℃</div>
+                <div id="clock-widget" class="header-item">00:00:00</div>
+                <button id="search-btn" class="header-item icon-btn" title="통합 검색"><i class="fa-solid fa-magnifying-glass"></i></button>
+                <button id="save-btn" class="header-item" title="변경사항 저장"><i class="fa-solid fa-floppy-disk"></i> 저장</button>
+                <button id="settings-btn" class="header-item icon-btn" title="설정"><i class="fa-solid fa-gear"></i></button>
+                <button id="logout-btn" class="header-item icon-btn" title="로그아웃"><i class="fa-solid fa-right-from-bracket"></i></button>
+            </div>
         </header>
-        <div class="flex" style="height: calc(100vh - 68px);">
-            <!-- Left Menu -->
-            <nav id="main-nav" class="bg-gray-800 text-white p-5 flex flex-col" style="width: 20%;">
-                <h2 class="text-xl font-semibold mb-6">메뉴</h2>
-                <ul id="menu-list" class="flex-grow">
-                    <!-- Menu items will be dynamically inserted here -->
-                </ul>
-                <div class="mt-auto pt-4 border-t border-gray-600">
-                     <a href="#" id="menu-settings" class="block py-2 px-4 rounded hover:bg-gray-700 transition duration-200">설정</a>
-                </div>
-            </nav>
-            <!-- Right Content Area with Tabs -->
-            <main id="main-content-area" class="flex flex-col bg-gray-100" style="width: 80%;">
-                <!-- Tab Bar -->
-                <div id="tab-bar" class="flex-shrink-0 flex border-b border-gray-200 bg-gray-100">
-                    <!-- Tabs will be inserted here -->
-                </div>
-                <!-- Tab Content -->
-                <div id="tab-content-panes" class="flex-grow relative bg-white">
-                    <!-- Iframes for each tab will be inserted here -->
-                </div>
+
+        <!-- Main Content Body -->
+        <div id="app-body">
+            <!-- Left Menu Frame -->
+            <nav id="left-menu"></nav>
+            <!-- Draggable handle to resize frames -->
+            <div id="resize-handle"></div>
+            <!-- Right Content Frame (with Tabs) -->
+            <main id="right-content">
+                <div id="tab-container"></div>
+                <div id="content-container"></div>
             </main>
         </div>
     </div>
 
-    <script>
-        // --- DATA STORE & PERSISTENCE ---
+    <!-- Section 3: Modals and Popups (Initially Hidden) -->
+    
+    <!-- Search Modal -->
+    <div id="search-modal" class="modal-wrapper" style="display: none;">
+        <div class="modal-content">
+            <span class="modal-close-btn">&times;</span>
+            <h2>통합 검색</h2>
+            <input type="text" id="search-input" placeholder="검색어를 입력하세요...">
+            <div class="search-engine-group">
+                <p>웹 검색</p>
+                <button data-engine="google">Google</button>
+                <button data-engine="naver_search">Naver</button>
+            </div>
+            <div class="search-engine-group">
+                <p>사전 검색</p>
+                <button data-engine="naver_ko_dic">국어사전</button>
+                <button data-engine="naver_en_dic">영어사전</button>
+                <button data-engine="naver_hanja_dic">한자사전</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Settings Modal (Content will be generated by JavaScript) -->
+    <div id="settings-modal" class="modal-wrapper" style="display: none;"></div>
 
-        // Default settings structure
-        const defaultSettings = {
-            userCredentials: { username: 'admin', password: 'password123' },
-            menuItems: [
-                { id: 'bible-study', name: '성경공부', target: 'iframe', contentType: 'html', content: `<div class='p-10 text-gray-700'><h1 class='text-3xl font-bold mb-4'>성경공부</h1><p>이곳에 성경공부 관련 내용을 작성합니다.</p></div>`, url: '' },
-                { id: 'sermon-helper', name: '말씀도우미', target: 'newWindow', contentType: 'html', content: `<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><title>말씀도우미</title><script src="https://cdn.tailwindcss.com"><\/script></head><body class="bg-gray-100"><div class='p-10 text-gray-700'><h1 class='text-3xl font-bold mb-4'>말씀도우미</h1><p>이곳에 말씀도우미 관련 내용을 작성합니다.</p></div></body></html>`, url: '' },
-                { id: 'presentation-helper', name: '프리젠테이션 템플릿 도우미', target: 'iframe', contentType: 'html', content: `<div class='p-10 text-gray-700'><h1 class='text-3xl font-bold mb-4'>프리젠테이션 템플릿 도우미</h1><p>이곳에 프리젠테이션 템플릿 관련 내용을 작성합니다.</p></div>`, url: '' }
-            ],
-            welcomePage: {
-                type: 'html',
-                content: `<div class='p-10 text-gray-700'><h1 class='text-3xl font-bold mb-4'>환영합니다!</h1><p class='text-lg'>왼쪽 메뉴를 클릭하여 원하시는 콘텐츠를 확인하세요.</p></div>`
-            },
-            design: {
-                ratio: 2,
-                headerColor: '#ffffff',
-                navColor: '#1f2937',
-                mainColor: '#ffffff',
-                headerFontColor: '#1a202c',
-                navFontColor: '#ffffff'
-            }
-        };
+    <!-- Tutorial Guide (Content will be generated by JavaScript) -->
+    <div id="tutorial-overlay" style="display: none;"></div>
 
-        // Main settings object
-        let settings;
+    <!-- Notification Container (for toast messages) -->
+    <div id="notification-container"></div>
 
-        function saveSettings() {
-            try {
-                localStorage.setItem('christianBoruisWebSettings', JSON.stringify(settings));
-            } catch (e) {
-                console.error("Error saving settings to localStorage", e);
-            }
-        }
-
-        function loadSettings() {
-            try {
-                const savedSettings = localStorage.getItem('christianBoruisWebSettings');
-                if (savedSettings) {
-                    const parsedSettings = JSON.parse(savedSettings);
-                    settings = { ...defaultSettings, ...parsedSettings };
-                    settings.userCredentials = { ...defaultSettings.userCredentials, ...parsedSettings.userCredentials };
-                    settings.welcomePage = { ...defaultSettings.welcomePage, ...parsedSettings.welcomePage };
-                    settings.design = { ...defaultSettings.design, ...parsedSettings.design };
-                    settings.menuItems = parsedSettings.menuItems || defaultSettings.menuItems;
-                } else {
-                    settings = { ...defaultSettings };
-                }
-            } catch (e) {
-                console.error("Error loading settings from localStorage", e);
-                settings = { ...defaultSettings };
-            }
-        }
-
-        function formatUrl(url) {
-            if (url && url.trim() && !/^https?:\/\//i.test(url)) {
-                return 'https://' + url.trim();
-            }
-            return url ? url.trim() : '';
-        }
-
-        // --- DOM ELEMENTS ---
-        const loginScreen = document.getElementById('login-screen');
-        const mainContent = document.getElementById('main-content');
-        const loginForm = document.getElementById('login-form');
-        const errorMessage = document.getElementById('error-message');
-        const menuList = document.getElementById('menu-list');
-        const mainNav = document.getElementById('main-nav');
-        const mainHeader = document.getElementById('main-header');
-        const mainHeaderTitle = document.getElementById('main-header-title');
-        const mainContentArea = document.getElementById('main-content-area');
-        const tabBar = document.getElementById('tab-bar');
-        const tabContentPanes = document.getElementById('tab-content-panes');
-        
-        // --- RENDER & APPLY FUNCTIONS ---
-        function renderMenu() {
-            menuList.innerHTML = '';
-            settings.menuItems.forEach(item => {
-                const li = document.createElement('li');
-                li.className = 'mb-4';
-                li.innerHTML = `<a href="#" data-id="${item.id}" class="menu-link block py-2 px-4 rounded hover:bg-gray-700 transition duration-200">${item.name}</a>`;
-                menuList.appendChild(li);
-            });
-        }
-        
-        function applyDesignSettings() {
-            const design = settings.design;
-            mainHeader.style.backgroundColor = design.headerColor;
-            mainHeaderTitle.style.color = design.headerFontColor;
-            mainNav.style.backgroundColor = design.navColor;
-            mainNav.style.color = design.navFontColor;
-            mainContentArea.style.backgroundColor = design.mainColor;
-            const ratio = design.ratio;
-            mainNav.style.width = `${ratio * 10}%`;
-            mainContentArea.style.width = `${100 - ratio * 10}%`;
-        }
-
-        // --- TAB MANAGEMENT ---
-        function switchToTab(tabId) {
-            document.querySelectorAll('.tab-button').forEach(tab => tab.classList.remove('active'));
-            document.querySelectorAll('.tab-content-pane').forEach(pane => pane.classList.remove('active'));
-
-            const tabToActivate = document.querySelector(`.tab-button[data-tab-id="${tabId}"]`);
-            const paneToActivate = document.querySelector(`.tab-content-pane[data-pane-id="${tabId}"]`);
-
-            if (tabToActivate) tabToActivate.classList.add('active');
-            if (paneToActivate) paneToActivate.classList.add('active');
-        }
-
-        function closeTab(tabId) {
-            const tabToRemove = document.querySelector(`.tab-button[data-tab-id="${tabId}"]`);
-            const paneToRemove = document.querySelector(`.tab-content-pane[data-pane-id="${tabId}"]`);
-            
-            if (tabToRemove && paneToRemove) {
-                const wasActive = tabToRemove.classList.contains('active');
-                const nextSibling = tabToRemove.nextElementSibling || tabToRemove.previousElementSibling;
-                
-                tabToRemove.remove();
-                paneToRemove.remove();
-                
-                if (wasActive && nextSibling) {
-                    switchToTab(nextSibling.dataset.tabId);
-                } else if (wasActive && tabBar.children.length > 0) {
-                    switchToTab(tabBar.lastChild.dataset.tabId);
-                }
-            }
-        }
-
-        function openOrSwitchToTab(menuItem) {
-            const existingTab = document.querySelector(`.tab-button[data-tab-id="${menuItem.id}"]`);
-            if (existingTab) {
-                switchToTab(menuItem.id);
-                return;
-            }
-
-            // Create Tab Button
-            const tabButton = document.createElement('button');
-            tabButton.className = 'tab-button flex items-center gap-2 px-4 py-2 border-t border-l border-r -mb-px bg-gray-200 text-gray-600';
-            tabButton.dataset.tabId = menuItem.id;
-            tabButton.innerHTML = `<span>${menuItem.name}</span>`;
-            
-            const closeButton = document.createElement('button');
-            closeButton.className = 'text-gray-500 hover:text-gray-800';
-            closeButton.innerHTML = '&times;';
-            closeButton.onclick = (e) => {
-                e.stopPropagation();
-                closeTab(menuItem.id);
-            };
-            tabButton.appendChild(closeButton);
-
-            tabButton.onclick = () => switchToTab(menuItem.id);
-            tabBar.appendChild(tabButton);
-
-            // Create Content Pane
-            const contentPane = document.createElement('div');
-            contentPane.className = 'tab-content-pane w-full h-full';
-            contentPane.dataset.paneId = menuItem.id;
-            
-            const iframe = document.createElement('iframe');
-            iframe.className = 'w-full h-full border-none';
-            iframe.allow = 'fullscreen';
-
-            if (menuItem.contentType === 'url') {
-                const urlToLoad = formatUrl(menuItem.url);
-                if (urlToLoad) {
-                    iframe.src = urlToLoad;
-                } else {
-                    iframe.srcdoc = `<div class='p-10 text-gray-700'><h1 class='text-2xl font-bold text-red-500'>오류</h1><p>이 메뉴에 연결된 URL이 없습니다. 설정에서 URL을 입력해주세요.</p></div>`;
-                }
-            } else {
-                // **ENHANCED SECURITY:** Inject security script into all HTML content loaded in iframes.
-                const securityScript = `<script>
-                    document.addEventListener('contextmenu', event => event.preventDefault());
-                    document.addEventListener('keydown', function(event) {
-                        if (event.key === 'F12' || (event.ctrlKey && event.shiftKey && (event.key === 'I' || event.key === 'J')) || (event.ctrlKey && event.key === 'U')) {
-                            event.preventDefault();
-                        }
-                    });
-                <\/script>`;
-                iframe.srcdoc = menuItem.content + securityScript;
-            }
-
-            if (menuItem.id === 'settings') {
-                iframe.onload = () => {
-                    const doc = iframe.contentDocument;
-                    if (doc) {
-                        attachSettingsEventListeners(doc);
-                    }
-                };
-            }
-            
-            contentPane.appendChild(iframe);
-            tabContentPanes.appendChild(contentPane);
-
-            switchToTab(menuItem.id);
-        }
-
-        // --- EVENT LISTENERS ---
-        loginForm.addEventListener('submit', function(event) {
-            event.preventDefault();
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
-            if (username === settings.userCredentials.username && password === settings.userCredentials.password) {
-                loginScreen.classList.add('hidden');
-                mainContent.classList.remove('hidden');
-                
-                applyDesignSettings();
-                renderMenu();
-
-                openOrSwitchToTab({
-                    id: 'welcome',
-                    name: '환영합니다',
-                    contentType: settings.welcomePage.type,
-                    content: settings.welcomePage.content,
-                    url: settings.welcomePage.type === 'url' ? settings.welcomePage.content : ''
-                });
-            } else {
-                errorMessage.classList.remove('hidden');
-            }
-        });
-
-        mainNav.addEventListener('click', function(e) {
-            e.preventDefault();
-            const link = e.target.closest('a');
-            if (!link) return;
-
-            if (link.classList.contains('menu-link')) {
-                const menuId = link.dataset.id;
-                const menuItem = settings.menuItems.find(m => m.id === menuId);
-                if (!menuItem) return;
-
-                if (menuItem.target === 'newWindow') {
-                    const newWindow = window.open("", "_blank");
-                    if (menuItem.contentType === 'url') {
-                        const urlToLoad = formatUrl(menuItem.url);
-                         if (urlToLoad) {
-                            newWindow.location.href = urlToLoad;
-                        } else {
-                            newWindow.document.write("URL이 지정되지 않았습니다.");
-                            newWindow.document.close();
-                        }
-                    } else {
-                        newWindow.document.write(menuItem.content);
-                        newWindow.document.close();
-                    }
-                } else {
-                    openOrSwitchToTab(menuItem);
-                }
-            }
-            if (link.id === 'menu-settings') {
-                openOrSwitchToTab({
-                    id: 'settings',
-                    name: '설정',
-                    contentType: 'html',
-                    content: getSettingsPageHtml()
-                });
-            }
-        });
-
-        // --- SECURITY SETTINGS (FOR MAIN DOCUMENT) ---
-        document.addEventListener('contextmenu', event => event.preventDefault());
-        document.addEventListener('keydown', function(event) {
-            if (event.key === 'F12' || (event.ctrlKey && event.shiftKey && (event.key === 'I' || event.key === 'J')) || (event.ctrlKey && event.key === 'U')) {
-                event.preventDefault();
-            }
-        });
-
-        // --- SETTINGS PAGE LOGIC ---
-        function getSettingsPageHtml() {
-            return `
-                <!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><title>설정</title>
-                <script src="https://cdn.tailwindcss.com"><\/script>
-                <style>
-                    body { font-family: 'Noto Sans KR', sans-serif; background-color: #f7fafc; padding: 2rem; }
-                    .settings-section { background-color: white; padding: 2rem; border-radius: 0.75rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06); margin-bottom: 2rem; }
-                    label { font-weight: 600; color: #4a5568; }
-                    input, select, textarea { width: 100%; padding: 0.75rem; margin-top: 0.5rem; border-radius: 0.375rem; border: 1px solid #e2e8f0; transition: all 0.2s; }
-                    input:focus, select:focus, textarea:focus { border-color: #4299e1; box-shadow: 0 0 0 2px rgba(66, 153, 225, 0.5); outline: none; }
-                    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.6rem 1.2rem; border-radius: 0.375rem; font-weight: 700; transition: all 0.2s; border: none; cursor: pointer; }
-                    .btn-primary { background-color: #4299e1; color: white; } .btn-primary:hover { background-color: #2b6cb0; }
-                    .btn-secondary { background-color: #e2e8f0; color: #4a5568; } .btn-secondary:hover { background-color: #cbd5e0; }
-                    .btn-icon { background: transparent; padding: 0.5rem; } .btn-icon:hover { background-color: #edf2f7; }
-                    .editor-toolbar { background-color: #edf2f7; padding: 0.5rem; border-radius: 0.375rem 0.375rem 0 0; border: 1px solid #e2e8f0; border-bottom: none; display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
-                    .editor-toolbar button, .editor-toolbar select { background: white; border: 1px solid #e2e8f0; padding: 0.5rem; border-radius: 0.25rem; width: auto; margin-top: 0; } .editor-toolbar button:hover { background-color: #f7fafc; }
-                    .editor-toolbar .color-picker-item { margin-top: 0; }
-                    .editor-content { border: 1px solid #e2e8f0; padding: 1rem; min-height: 200px; border-radius: 0 0 0.375rem 0.375rem; }
-                    .color-picker-wrapper { display: flex; flex-direction: column; gap: 0.5rem; }
-                    .color-picker-item { display: flex; align-items: center; gap: 0.5rem; }
-                    .color-picker-item input[type='color'] { padding: 0; width: 32px; height: 32px; border: none; border-radius: 50%; cursor: pointer; background-color: transparent; }
-                    .theme-swatch { width: 100%; height: 40px; border-radius: 0.375rem; cursor: pointer; display: flex; overflow: hidden; border: 1px solid #e2e8f0; transition: transform 0.2s; }
-                    .theme-swatch:hover { transform: scale(1.03); }
-                    .theme-swatch > div { flex: 1; }
-                    .help-text { font-size: 0.875rem; color: #718096; margin-top: 0.5rem; }
-                <\/style>
-                </head><body>
-                    <h1 class="text-3xl font-bold mb-8 text-gray-800">설정</h1>
-                    <div class="settings-section"><h2 class="text-2xl font-semibold mb-6 text-gray-700">초기 페이지 설정</h2><div class="mb-4"><label class="block mb-2">표시 타입</label><select id="welcome-type-select" class="w-auto"><option value="html">직접 편집</option><option value="url">웹페이지 링크</option></select></div><div id="welcome-editor-wrapper"><div class="editor-toolbar"><button data-command="bold" title="굵게"><b>B</b></button><button data-command="italic" title="기울임"><i>I</i></button><button data-command="underline" title="밑줄"><u>U</u></button><button data-command="justifyLeft" title="왼쪽 정렬"><svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 15a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd"></path></svg></button><button data-command="justifyCenter" title="가운데 정렬"><svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5 5a1 1 0 011-1h8a1 1 0 110 2H6a1 1 0 01-1-1zM3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM5 15a1 1 0 011-1h8a1 1 0 110 2H6a1 1 0 01-1-1z" clip-rule="evenodd"></path></svg></button><button data-command="justifyRight" title="오른쪽 정렬"><svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5 5a1 1 0 011-1h12a1 1 0 110 2H6a1 1 0 01-1-1zM3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM5 15a1 1 0 011-1h12a1 1 0 110 2H6a1 1 0 01-1-1z" clip-rule="evenodd"></path></svg></button><button data-command="insertImage" title="이미지 삽입"><svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clip-rule="evenodd"></path></svg></button><select data-command="fontSize" title="글자 크기"><option value="3">기본</option><option value="5">크게</option><option value="7">아주 크게</option></select><div class="color-picker-item"><input type="color" id="editor-fore-color" title="글자색"></div></div><div id="welcome-editor" contenteditable="true" class="editor-content"></div></div><div id="welcome-url-wrapper" class="hidden"><label>웹페이지 URL</label><input type="text" id="welcome-url-input" placeholder="example.com"><p class="help-text">참고: Google, Naver 등 일부 웹사이트는 보안 정책으로 인해 프레임 안에 표시되지 않을 수 있습니다.</p></div><button id="save-welcome-page" class="btn btn-primary mt-4">초기 페이지 저장</button></div>
-                    <div class="settings-section"><h2 class="text-2xl font-semibold mb-6 text-gray-700">디자인 설정</h2><div class="mb-8"><h3 class="text-xl font-semibold mb-4 text-gray-600">레이아웃 비율 (왼쪽:오른쪽)</h3><div class="flex items-center gap-4 flex-wrap"><button id="ratio-1-9" class="btn btn-secondary">1:9</button><button id="ratio-2-8" class="btn btn-secondary">2:8 (기본)</button><div class="flex items-center gap-2"><input type="number" id="custom-ratio-input" min="1" max="5" placeholder="1~5" class="w-24 p-2 text-center"><button id="apply-custom-ratio" class="btn btn-primary">적용</button></div></div></div><div class="mb-8"><h3 class="text-xl font-semibold mb-4 text-gray-600">색상 변경</h3><div class="grid grid-cols-1 md:grid-cols-3 gap-6"><div class="color-picker-wrapper"><div class="color-picker-item"><label for="header-color">상단 배경</label><input type="color" id="header-color"></div><div class="color-picker-item"><label for="header-font-color">상단 글자</label><input type="color" id="header-font-color"></div></div><div class="color-picker-wrapper"><div class="color-picker-item"><label for="nav-color">메뉴 배경</label><input type="color" id="nav-color"></div><div class="color-picker-item"><label for="nav-font-color">메뉴 글자</label><input type="color" id="nav-font-color"></div></div><div class="color-picker-wrapper"><div class="color-picker-item"><label for="main-color">컨텐츠 배경</label><input type="color" id="main-color"></div></div></div></div><div><h3 class="text-xl font-semibold mb-4 text-gray-600">눈이 편한 색상 추천</h3><div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4" id="theme-container"></div></div></div>
-                    <div class="settings-section"><h2 class="text-2xl font-semibold mb-4 text-gray-700">메뉴 관리</h2><div id="menu-management-list" class="mb-6"></div><div class="bg-gray-50 p-6 rounded-lg"><h3 class="text-xl font-semibold mb-4 text-gray-600">새 메뉴 추가 / 수정</h3><form id="menu-form"><input type="hidden" id="menu-edit-id"><div class="mb-4"><label for="menu-name">메뉴 이름</label><input type="text" id="menu-name" required></div><div class="mb-4"><label for="menu-target">표시 방법</label><select id="menu-target"><option value="iframe">오른쪽 프레임</option><option value="newWindow">새 창</option></select></div><div class="mb-4"><label for="menu-content-type">콘텐츠 타입</label><select id="menu-content-type"><option value="html">HTML 직접 입력</option><option value="url">웹사이트 링크</option></select></div><div id="content-html-wrapper" class="mb-4"><label for="menu-content">내용 (HTML)</label><textarea id="menu-content" rows="6" placeholder="메뉴 클릭 시 보여줄 HTML 내용을 입력하세요."></textarea></div><div id="content-url-wrapper" class="mb-4 hidden"><label for="menu-url">웹사이트 URL</label><input type="text" id="menu-url" placeholder="example.com"><p class="help-text">참고: 일부 웹사이트는 보안 정책상 프레임 표시가 안될 수 있습니다. 이 경우 '표시 방법'을 '새 창'으로 설정하세요.</p></div><div class="flex gap-2"><button type="submit" id="save-menu-btn" class="btn btn-primary">저장</button><button type="button" id="clear-menu-form-btn" class="btn btn-secondary">취소</button></div></form></div></div>
-                    <div class="settings-section"><h2 class="text-2xl font-semibold mb-4 text-gray-700">사용자 정보 수정</h2><form id="user-form"><div class="mb-4"><label for="new-username">새 아이디</label><input type="text" id="new-username" required></div><div class="mb-4"><label for="new-password">새 패스워드</label><input type="password" id="new-password" placeholder="변경할 경우에만 입력"></div><button type="submit" class="btn btn-primary">정보 저장</button></form></div>
-                </body></html>`;
-        }
-
-        function attachSettingsEventListeners(doc) {
-            // --- Initial Page Settings Logic ---
-            const welcomeTypeSelect = doc.getElementById('welcome-type-select');
-            const welcomeEditorWrapper = doc.getElementById('welcome-editor-wrapper');
-            const welcomeUrlWrapper = doc.getElementById('welcome-url-wrapper');
-            const welcomeEditor = doc.getElementById('welcome-editor');
-            const welcomeUrlInput = doc.getElementById('welcome-url-input');
-            const welcomeToolbar = welcomeEditorWrapper.querySelector('.editor-toolbar');
-
-            function setWelcomeView(type) {
-                if (type === 'url') {
-                    welcomeEditorWrapper.classList.add('hidden');
-                    welcomeUrlWrapper.classList.remove('hidden');
-                } else {
-                    welcomeEditorWrapper.classList.remove('hidden');
-                    welcomeUrlWrapper.classList.add('hidden');
-                }
-            }
-
-            welcomeTypeSelect.value = settings.welcomePage.type;
-            setWelcomeView(settings.welcomePage.type);
-            if (settings.welcomePage.type === 'html') {
-                welcomeEditor.innerHTML = settings.welcomePage.content;
-            } else {
-                welcomeUrlInput.value = settings.welcomePage.content;
-            }
-
-            welcomeTypeSelect.addEventListener('change', () => setWelcomeView(welcomeTypeSelect.value));
-
-            welcomeToolbar.addEventListener('click', e => {
-                const target = e.target.closest('button, select');
-                if (!target) return;
-                const command = target.dataset.command;
-                if (!command) return;
-                
-                let value = target.value;
-                if (command === 'insertImage') {
-                    value = prompt('이미지 URL을 입력하세요:', 'http://');
-                    if (!value) return;
-                }
-                doc.execCommand(command, false, value);
-                welcomeEditor.focus();
-            });
-            doc.getElementById('editor-fore-color').addEventListener('input', e => {
-                 doc.execCommand('foreColor', false, e.target.value);
-            });
-
-            doc.getElementById('save-welcome-page').addEventListener('click', () => {
-                const type = welcomeTypeSelect.value;
-                settings.welcomePage.type = type;
-                if (type === 'html') {
-                    settings.welcomePage.content = welcomeEditor.innerHTML;
-                } else {
-                    settings.welcomePage.content = welcomeUrlInput.value;
-                }
-                saveSettings();
-                alert('초기 페이지가 저장되었습니다.');
-            });
-
-            // --- Design Settings Logic ---
-            function applyAndSaveRatio(leftRatio) {
-                settings.design.ratio = leftRatio;
-                applyDesignSettings();
-                saveSettings();
-            }
-            doc.getElementById('ratio-1-9').addEventListener('click', () => applyAndSaveRatio(1));
-            doc.getElementById('ratio-2-8').addEventListener('click', () => applyAndSaveRatio(2));
-            doc.getElementById('apply-custom-ratio').addEventListener('click', () => {
-                const val = parseInt(doc.getElementById('custom-ratio-input').value, 10);
-                if (val >= 1 && val <= 5) applyAndSaveRatio(val); else alert('비율은 1에서 5 사이의 숫자로 입력해주세요.');
-            });
-            
-            const headerColorPicker = doc.getElementById('header-color');
-            const headerFontColorPicker = doc.getElementById('header-font-color');
-            const navColorPicker = doc.getElementById('nav-color');
-            const navFontColorPicker = doc.getElementById('nav-font-color');
-            const mainColorPicker = doc.getElementById('main-color');
-            
-            headerColorPicker.value = settings.design.headerColor;
-            headerFontColorPicker.value = settings.design.headerFontColor;
-            navColorPicker.value = settings.design.navColor;
-            navFontColorPicker.value = settings.design.navFontColor;
-            mainColorPicker.value = settings.design.mainColor;
-            
-            function createColorInputHandler(key) {
-                return (e) => {
-                    settings.design[key] = e.target.value;
-                    applyDesignSettings();
-                    saveSettings();
-                };
-            }
-            headerColorPicker.addEventListener('input', createColorInputHandler('headerColor'));
-            headerFontColorPicker.addEventListener('input', createColorInputHandler('headerFontColor'));
-            navColorPicker.addEventListener('input', createColorInputHandler('navColor'));
-            navFontColorPicker.addEventListener('input', createColorInputHandler('navFontColor'));
-            mainColorPicker.addEventListener('input', createColorInputHandler('mainColor'));
-            
-            const colorThemes = [
-                { name: '차분한 블루', colors: { header: '#EBF8FF', nav: '#2C5282', main: '#FFFFFF', headerFont: '#2A4365', navFont: '#EBF8FF' } },
-                { name: '부드러운 그린', colors: { header: '#F0FFF4', nav: '#2F855A', main: '#FFFFFF', headerFont: '#276749', navFont: '#F0FFF4' } },
-                { name: '따뜻한 베이지', colors: { header: '#FFFBF0', nav: '#D69E2E', main: '#FFFFFF', headerFont: '#975A16', navFont: '#FFFAF0' } },
-                { name: '편안한 그레이', colors: { header: '#EDF2F7', nav: '#4A5568', main: '#F7FAFC', headerFont: '#1A202C', navFont: '#EDF2F7' } },
-                { name: '온화한 라벤더', colors: { header: '#FAF5FF', nav: '#6B46C1', main: '#FFFFFF', headerFont: '#553C9A', navFont: '#FAF5FF' } }
-            ];
-            const themeContainer = doc.getElementById('theme-container');
-            themeContainer.innerHTML = '';
-            colorThemes.forEach(theme => {
-                const themeDiv = doc.createElement('div');
-                themeDiv.innerHTML = `<p class="text-sm text-gray-600 mb-1">${theme.name}</p><div class="theme-swatch" title="클릭하여 적용"><div style="background-color: ${theme.colors.header};"></div><div style="background-color: ${theme.colors.nav};"></div><div style="background-color: ${theme.colors.main};"></div></div>`;
-                themeDiv.querySelector('.theme-swatch').addEventListener('click', () => {
-                    settings.design.headerColor = theme.colors.header;
-                    settings.design.navColor = theme.colors.nav;
-                    settings.design.mainColor = theme.colors.main;
-                    settings.design.headerFontColor = theme.colors.headerFont;
-                    settings.design.navFontColor = theme.colors.navFont;
-
-                    applyDesignSettings();
-                    saveSettings();
-
-                    headerColorPicker.value = theme.colors.header;
-                    navColorPicker.value = theme.colors.nav;
-                    mainColorPicker.value = theme.colors.main;
-                    headerFontColorPicker.value = theme.colors.headerFont;
-                    navFontColorPicker.value = theme.colors.navFont;
-                });
-                themeContainer.appendChild(themeDiv);
-            });
-
-            // --- User Info Logic ---
-            const userForm = doc.getElementById('user-form');
-            userForm.querySelector('#new-username').value = settings.userCredentials.username;
-            userForm.addEventListener('submit', e => {
-                e.preventDefault();
-                settings.userCredentials.username = doc.getElementById('new-username').value;
-                const newPass = doc.getElementById('new-password').value;
-                if (newPass) {
-                    settings.userCredentials.password = newPass;
-                }
-                saveSettings();
-                alert('사용자 정보가 저장되었습니다.');
-                doc.getElementById('new-password').value = '';
-            });
-
-            // --- Menu Management Logic ---
-            const menuForm = doc.getElementById('menu-form');
-            const menuEditId = doc.getElementById('menu-edit-id');
-            const menuName = doc.getElementById('menu-name');
-            const menuTarget = doc.getElementById('menu-target');
-            const menuContentType = doc.getElementById('menu-content-type');
-            const menuContent = doc.getElementById('menu-content');
-            const menuUrl = doc.getElementById('menu-url');
-            const htmlWrapper = doc.getElementById('content-html-wrapper');
-            const urlWrapper = doc.getElementById('content-url-wrapper');
-
-            function toggleContentTypeView() {
-                if (menuContentType.value === 'url') {
-                    htmlWrapper.classList.add('hidden');
-                    urlWrapper.classList.remove('hidden');
-                } else {
-                    htmlWrapper.classList.remove('hidden');
-                    urlWrapper.classList.add('hidden');
-                }
-            }
-            menuContentType.addEventListener('change', toggleContentTypeView);
-            
-            function clearMenuForm() {
-                menuForm.reset();
-                menuEditId.value = '';
-                toggleContentTypeView();
-            }
-
-            menuForm.addEventListener('submit', e => {
-                e.preventDefault();
-                const id = menuEditId.value;
-                const newMenuItem = {
-                    id: id || `menu-${Date.now()}`,
-                    name: menuName.value,
-                    target: menuTarget.value,
-                    contentType: menuContentType.value,
-                    content: menuContent.value,
-                    url: menuUrl.value
-                };
-                if (id) {
-                    settings.menuItems = settings.menuItems.map(item => item.id === id ? newMenuItem : item);
-                } else {
-                    settings.menuItems.push(newMenuItem);
-                }
-                saveSettings();
-                renderMenu();
-                renderMenuManagementList(doc);
-                clearMenuForm();
-                alert('메뉴가 저장되었습니다.');
-            });
-            
-            doc.getElementById('clear-menu-form-btn').addEventListener('click', clearMenuForm);
-
-            doc.getElementById('menu-management-list').addEventListener('click', e => {
-                const button = e.target.closest('button');
-                if (!button) return;
-                const id = button.getAttribute('data-id');
-                if (!id) return;
-                
-                if (button.classList.contains('edit-btn')) {
-                    const itemToEdit = settings.menuItems.find(item => item.id === id);
-                    if(itemToEdit) {
-                        menuEditId.value = itemToEdit.id;
-                        menuName.value = itemToEdit.name;
-                        menuTarget.value = itemToEdit.target;
-                        menuContentType.value = itemToEdit.contentType;
-                        menuContent.value = itemToEdit.content;
-                        menuUrl.value = itemToEdit.url;
-                        toggleContentTypeView();
-                        menuForm.scrollIntoView({ behavior: 'smooth' });
-                    }
-                } else if (button.classList.contains('delete-btn')) {
-                    if (confirm(`'${button.getAttribute('data-name')}' 메뉴를 정말 삭제하시겠습니까?`)) {
-                        settings.menuItems = settings.menuItems.filter(item => item.id !== id);
-                        saveSettings();
-                        renderMenu();
-                        renderMenuManagementList(doc);
-                    }
-                }
-            });
-
-            renderMenuManagementList(doc);
-        }
-
-        function renderMenuManagementList(doc) {
-            const listContainer = doc.getElementById('menu-management-list');
-            if (!listContainer) return;
-            const editIcon = `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" /><path fill-rule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clip-rule="evenodd" /></svg>`;
-            const deleteIcon = `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" /></svg>`;
-            
-            listContainer.innerHTML = settings.menuItems.map(item => `
-                <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg mb-2 border">
-                    <span class="font-medium text-gray-700">${item.name}</span>
-                    <div class="flex gap-2">
-                        <button data-id="${item.id}" class="edit-btn btn-icon text-blue-500" title="수정">${editIcon}</button>
-                        <button data-id="${item.id}" data-name="${item.name}" class="delete-btn btn-icon text-red-500" title="삭제">${deleteIcon}</button>
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        // --- INITIALIZE APP ---
-        loadSettings();
-
-    </script>
 </body>
 </html>
