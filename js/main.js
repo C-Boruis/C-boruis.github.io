@@ -60,8 +60,8 @@ class DashboardApp {
 
         try {
             // Replace with your GitHub username and repository name
-            const GITHUB_USERNAME = "C-Boruis";
-            const GITHUB_REPO = "C-Boruis";
+            const GITHUB_USERNAME = "YOUR_GITHUB_USERNAME";
+            const GITHUB_REPO = "YOUR_REPOSITORY_NAME";
             const response = await fetch(`https://api.github.com/repos/${GITHUB_USERNAME}/${GITHUB_REPO}/contents/config.json`);
             
             if (!response.ok) {
@@ -95,7 +95,8 @@ class DashboardApp {
         return {
             account: {
                 username: "kbs0829",
-                passwordHash: "a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3" // SHA-256 hash of '3046'
+                // CORRECTED: The hash now matches the one your browser generates.
+                passwordHash: "3a1e774a8ea4f3f402fb14450653c20d4643489b3bd77e8cc22690b879a41635"
             },
             settings: {
                 loginScreen: { message: "Personal Dashboard", font: "Arial", color: "#FFFFFF", fontSize: "24px", align: "center", image: "" },
@@ -123,8 +124,8 @@ class DashboardApp {
             return;
         }
 
-        const GITHUB_USERNAME = "C-Boruis"; // Replace
-        const GITHUB_REPO = "C-Boruis";   // Replace
+        const GITHUB_USERNAME = "YOUR_GITHUB_USERNAME"; // Replace
+        const GITHUB_REPO = "YOUR_REPOSITORY_NAME";   // Replace
         const url = `https://api.github.com/repos/${GITHUB_USERNAME}/${GITHUB_REPO}/contents/config.json`;
 
         const contentToSave = { ...this.state };
@@ -274,9 +275,6 @@ class DashboardApp {
         }
 
         const inputHash = await this.hashPassword(password);
-        
-        console.log("입력된 암호:", inputHash, "저장된 암호:", this.state.account.passwordHash);
-        
         if (username === this.state.account.username && inputHash === this.state.account.passwordHash) {
             this.showNotification(`환영합니다, ${username}님!`, "success");
             this.showDashboard();
@@ -535,7 +533,7 @@ class DashboardApp {
                         <label>날씨 API 키 (OpenWeatherMap)</label>
                         <input type="text" id="weather-api-key" value="${this.state.settings.weather.apiKey}">
                     </div>
-                     <div class="form-group">
+                     <div class.form-group">
                         <label>날씨 도시 (영문)</label>
                         <input type="text" id="weather-city" value="${this.state.settings.weather.city}">
                     </div>
@@ -601,12 +599,12 @@ class DashboardApp {
     // =================================================================
     
     applySecurityMeasures() {
-    //    document.addEventListener('contextmenu', e => e.preventDefault());
-    //    document.addEventListener('keydown', e => {
-    //        if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C'))) {
-    //           e.preventDefault();
-    //       }
-    //    });
+        document.addEventListener('contextmenu', e => e.preventDefault());
+        document.addEventListener('keydown', e => {
+            if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C'))) {
+                e.preventDefault();
+            }
+        });
     }
 
     async hashPassword(password) {
