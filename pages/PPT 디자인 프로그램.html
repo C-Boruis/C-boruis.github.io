@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PPT 템플릿 디자인 프로그램</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- PptxGenJS 라이브러리 추가 -->
+    <script src="https://unpkg.com/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&family=Gothic+A1:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+        }
+        .nav-btn.active {
+            background-color: #4f46e5;
+            color: white;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        }
+        .nav-btn {
+            transition: all 0.2s ease-in-out;
+        }
+        .page {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .preview-slide {
+            border: 1px solid #e5e7eb;
+            aspect-ratio: 16 / 9;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            transition: transform 0.2s ease-in-out;
+            position: relative;
+            overflow: hidden;
+        }
+        .preview-slide:hover {
+            transform: scale(1.02);
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+        }
+        .color-swatch {
+            width: 1.5rem;
+            height: 1.5rem;
+            border-radius: 9999px;
+            border: 2px solid white;
+            box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+        }
+        /* 모달(오버레이) 스타일 */
+        #color-modal-overlay {
+            transition: opacity 0.2s ease-in-out;
+        }
+        #color-modal-content {
+            animation: zoomIn 0.3s ease-out;
+        }
+        @keyframes zoomIn {
+            from { transform: scale(0.95); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+        #modal-close-btn {
+            font-size: 1.8rem;
+            line-height: 1;
+            font-weight: 300;
+        }
+        /* 아티스트 & 웹 템플릿 스타일 */
+        .preview-slide .dot-pattern {
+            position: absolute;
+            inset: 0;
+            background-image: radial-gradient(#00000033 1px, transparent 1px);
+            background-size: 10px 10px;
+            opacity: 0.3;
+        }
+        .preview-slide .texture-pattern {
+             position: absolute;
+            inset: 0;
+            background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCIgdmlld0JveD0iMCAwIDQwIDQwIj48ZyBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNhOWE5YTkiIGZpbGwtb3BhY2l0eT0iMC4xIj48cGF0aCBkPSJNMTQgMTNsMS4zOTEuMzkxTDE0IDE0LjczVjEzbTcuMzYxIDguNzJMOC43MiAyOS4wODFsMS40MTQgMS40MTRMMjguNDUgMTIuMTYybC0xLjQxNC0xLjQxNEwxOS42NzYgMjAuMDhsMi4xMjEgMi4xMjFNNCAzMGw0LjI0My00LjI0M2wxLjQxNCAxLjQxNEw0IDMyLjgyOFYzMG0yMy4xNzIgMi4xNzJMMzYgMjMuNDVsLTEuNDE0LTEuNDE0TDI1LjczMiAzMC4zMmwyLjgzIDIuODNNMzYgNGwtMS40MTQgMS40MTRMMzYgNi44M1Y0bS0uNjg2IDE5LjU1N2wxLjQxNC0xLjQxNEwyMS4zNjQgMi43NzlsLTEuNDE0IDEuNDE0TDM1LjMxNCAyMy41NTd6TTQgMHYyLjgyOEw1LjQxNCAwbC0xLjQxNC0xLjQxNEw0IDB6bTIuODU4IDE0LjQyOGwxLjQxNC0xLjQxNEw1LjgzNiA5LjE3MmwzLjU0IDMuNTQtMS40MiAxLjQxTDEwLjQgOS4xN3ptMjQuMzA2IDQuMzA2bC0yLjgzIDIuODMtMi44My0yLjgzbDIuODMtMi44M2wyLjgzIDIuODN6TTMyLjI5IDE3LjFsMS40My0xLjQxLTEuNDEtMS40My0xLjQzIDEuNDF6bS0yNC4zMzYgMGwtMS40My0xLjQxIDEuNDEtMS40MyAxLjQzIDEuNDF6Ii8+PC9nPjwvZz48L3N2Zz4=');
+             opacity: 0.5;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800">
+
+    <div class="container mx-auto p-4 md:p-8">
+        <header class="bg-white rounded-xl shadow-md p-6 mb-8">
+            <h1 class="text-2xl md:text-3xl font-bold text-gray-900 text-center mb-6">PPT 템플릿 디자인 프로그램</h1>
+            <nav class="flex flex-col sm:flex-row justify-center items-center space-y-2 sm:space-y-0 sm:space-x-4">
+                <button id="btn-color-design" class="nav-btn w-full sm:w-auto bg-white text-gray-700 font-semibold py-3 px-6 border border-gray-200 rounded-lg hover:bg-gray-50 shadow-sm">
+                    🎨 색상 조합 디자인
+                </button>
+                <button id="btn-artist-design" class="nav-btn w-full sm:w-auto bg-white text-gray-700 font-semibold py-3 px-6 border border-gray-200 rounded-lg hover:bg-gray-50 shadow-sm">
+                    🖌️ 아티스트 영감 디자인
+                </button>
+                <button id="btn-web-design" class="nav-btn w-full sm:w-auto bg-white text-gray-700 font-semibold py-3 px-6 border border-gray-200 rounded-lg hover:bg-gray-50 shadow-sm">
+                    💻 웹 템플릿 참고 디자인
+                </button>
+            </nav>
+        </header>
+
+        <main id="main-content" class="bg-white rounded-xl shadow-md p-6 md:p-10 min-h-[60vh]">
+            <!-- 페이지 내용이 여기에 로드됩니다. -->
+        </main>
+    </div>
+
+    <!-- 색상 코드 확인 모달 -->
+    <div id="color-modal-overlay" class="fixed inset-0 bg-black bg-opacity-60 hidden items-center justify-center p-4 z-50">
+        <div id="color-modal-content" class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md relative">
+            <button id="modal-close-btn" class="absolute top-3 right-4 text-gray-400 hover:text-gray-700 transition-colors">&times;</button>
+            <h3 id="modal-title" class="text-xl font-bold mb-4 text-gray-800">색상 정보</h3>
+            <div id="modal-body" class="space-y-3 border-t pt-4">
+                <!-- 색상 상세 정보가 여기에 동적으로 삽입됩니다. -->
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        const mainContent = document.getElementById('main-content');
+        const buttons = {
+            color: document.getElementById('btn-color-design'),
+            artist: document.getElementById('btn-artist-design'),
+            web: document.getElementById('btn-web-design'),
+        };
+        
+        // --- 페이지 컨텐츠 정의 ---
+        const colorPageContent = `
+            <div class="page">
+                <div class="text-center mb-8">
+                    <h2 class="text-2xl font-bold mb-2 text-indigo-600">1. 색상 조합 디자인</h2>
+                    <p class="text-gray-600">템플릿의 핵심이 될 메인 색상을 선택하고, AI가 추천하는 10가지 전문적인 색상 조합을 만나보세요.</p>
+                </div>
+                <div class="p-6 bg-gray-50 rounded-lg mb-8">
+                    <div class="flex flex-col sm:flex-row items-center justify-center gap-4 mb-4">
+                        <label for="color-picker" class="font-semibold text-lg">메인 색상 선택:</label>
+                        <input type="color" id="color-picker" value="#4f46e5" class="w-16 h-10 p-1 border border-gray-300 rounded-md cursor-pointer">
+                        <button id="generate-btn" class="bg-indigo-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-indigo-700 transition-colors shadow">
+                            디자인 샘플 생성
+                        </button>
+                    </div>
+                    <div class="flex items-center justify-center gap-3">
+                         <span class="text-sm font-semibold text-gray-600">추천 색상:</span>
+                         <button class="recommended-color-btn" style="background-color: #3b82f6;" data-color="#3b82f6"></button>
+                         <button class="recommended-color-btn" style="background-color: #10b981;" data-color="#10b981"></button>
+                         <button class="recommended-color-btn" style="background-color: #f97316;" data-color="#f97316"></button>
+                         <button class="recommended-color-btn" style="background-color: #6366f1;" data-color="#6366f1"></button>
+                         <button class="recommended-color-btn" style="background-color: #ec4899;" data-color="#ec4899"></button>
+                         <button class="recommended-color-btn" style="background-color: #6b7280;" data-color="#6b7280"></button>
+                    </div>
+                </div>
+                <div id="samples-container" class="grid grid-cols-1 md:grid-cols-2 gap-8"></div>
+            </div>`;
+        const artistPageContent = `
+            <div class="page">
+                <div class="text-center mb-8">
+                    <h2 class="text-2xl font-bold mb-2 text-teal-600">2. 아티스트 영감 디자인</h2>
+                    <p class="text-gray-600">팝아트 거장들의 독창적인 스타일과 색채를 당신의 PPT에 담아보세요.</p>
+                </div>
+                <div class="flex flex-col sm:flex-row items-center justify-center gap-4 p-6 bg-gray-50 rounded-lg mb-8">
+                    <label for="artist-select" class="font-semibold text-lg">아티스트 선택:</label>
+                    <select id="artist-select" class="bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 p-2.5">
+                        <option value="david-hockney">데이비드 호크니</option>
+                        <option value="andy-warhol">앤디 워홀</option>
+                        <option value="roy-lichtenstein">로이 리히텐슈타인</option>
+                        <option value="keith-haring">키스 해링</option>
+                        <option value="robert-indiana">로버트 인디애나</option>
+                        <option value="claes-oldenburg">클래스 올덴버그</option>
+                        <option value="james-rosenquist">제임스 로젠퀴스트</option>
+                        <option value="robert-rauschenberg">로버트 라우센버그</option>
+                        <option value="richard-hamilton">리처드 해밀턴</option>
+                    </select>
+                    <button id="generate-artist-btn" class="bg-teal-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-teal-700 transition-colors shadow">
+                        디자인 샘플 생성
+                    </button>
+                </div>
+                <div id="samples-container" class="grid grid-cols-1 md:grid-cols-2 gap-8"></div>
+            </div>`;
+        const webPageContent = `
+            <div class="page">
+                <div class="text-center mb-8">
+                    <h2 class="text-2xl font-bold mb-2 text-sky-600">3. 웹 템플릿 참고 디자인</h2>
+                    <p class="text-gray-600">원하는 스타일과 목적을 선택하여 최적의 템플릿을 만나보세요.</p>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 items-center justify-center gap-4 p-6 bg-gray-50 rounded-lg mb-8">
+                    <div class="flex flex-col items-center">
+                        <label for="web-style-select" class="font-semibold text-lg mb-2">1. 스타일 선택</label>
+                        <select id="web-style-select" class="w-full bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 p-2.5">
+                            <option value="simple">심플</option>
+                            <option value="modern">모던</option>
+                            <option value="business">비즈니스</option>
+                            <option value="cute">귀여운</option>
+                        </select>
+                    </div>
+                    <div class="flex flex-col items-center">
+                        <label for="web-purpose-select" class="font-semibold text-lg mb-2">2. 목적 선택</label>
+                        <select id="web-purpose-select" class="w-full bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 p-2.5">
+                            <option value="proposal">제안서/보고서</option>
+                            <option value="lecture">강의/교육</option>
+                            <option value="portfolio">포트폴리오</option>
+                        </select>
+                    </div>
+                    <div class="flex flex-col items-center mt-4 md:mt-0">
+                        <button id="generate-web-btn" class="w-full bg-sky-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-sky-700 transition-colors shadow">
+                            디자인 샘플 생성
+                        </button>
+                    </div>
+                </div>
+                <div id="samples-container" class="grid grid-cols-1 md:grid-cols-2 gap-8"></div>
+            </div>
+        `;
+
+        const pages = {
+            color: colorPageContent,
+            artist: artistPageContent,
+            web: webPageContent,
+        };
+
+        // --- 데이터베이스 ---
+        const artistData = {
+            'david-hockney': { name: '데이비드 호크니', base: [{ n: 'Pool', c: ['#0ea5e9', '#f472b6', '#eab308', '#ffffff'] }, { n: 'Landscape', c: ['#8b5cf6', '#22c55e', '#f97316', '#a3e635'] }] },
+            'andy-warhol': { name: '앤디 워홀', base: [{ n: 'Marilyn', c: ['#f472b6', '#06b6d4', '#fde047', '#eab308'] }, { n: 'Soup Can', c: ['#dc2626', '#1f2937', '#facc15', '#f3f4f6'] }] },
+            'roy-lichtenstein': { name: '로이 리히텐슈타인', style: 'dots', base: [{ n: 'Comic', c: ['#2563eb', '#ef4444', '#fef9c3', '#000000'] }] },
+            'keith-haring': { name: '키스 해링', style: 'lines', base: [{ n: 'Pop Art', c: ['#fde047', '#3b82f6', '#ef4444', '#10b981', '#000000'] }] },
+            'robert-indiana': { name: '로버트 인디애나', base: [{ n: 'LOVE', c: ['#dc2626', '#16a34a', '#2563eb', '#f3f4f6'] }] },
+            'claes-oldenburg': { name: '클래스 올덴버그', base: [{ n: 'Soft Sculpture', c: ['#f97316', '#eab308', '#dc2626', '#ffffff'] }] },
+            'james-rosenquist': { name: '제임스 로젠퀴스트', base: [{ n: 'F-111', c: ['#be185d', '#ca8a04', '#65a30d', '#d1d5db'] }] },
+            'robert-rauschenberg': { name: '로버트 라우센버그', style: 'texture', base: [{ n: 'Combine', c: ['#a16207', '#b91c1c', '#1e3a8a', '#6b7280'] }] },
+            'richard-hamilton': { name: '리처드 해밀턴', style: 'texture', base: [{ n: 'Collage', c: ['#713f12', '#7f1d1d', '#9ca3af', '#facc15'] }] },
+        };
+        const webTemplateData = {
+            palettes: {
+                simple: ['#dbeafe', '#2563eb', '#64748b', '#ffffff'],
+                modern: ['#111827', '#f9fafb', '#4f46e5', '#9ca3af'],
+                business: ['#064e3b', '#34d399', '#f0fdfa', '#52525b'],
+                cute: ['#fefce8', '#f97316', '#fb923c', '#4ade80'],
+            },
+            fonts: {
+                simple: { title: 'Noto Sans KR', body: 'Noto Sans KR' },
+                modern: { title: 'Gothic A1', body: 'Noto Sans KR' },
+                business: { title: 'Noto Sans KR', body: 'Gothic A1' },
+                cute: { title: 'Gothic A1', body: 'Gothic A1' },
+            },
+            layouts: {
+                proposal: ['title', 'toc', 'problem', 'solution', 'data-chart', 'qna', 'thanks'],
+                lecture: ['title', 'intro', 'content-image', 'content-list', 'summary', 'qna', 'thanks'],
+                portfolio: ['title', 'profile', 'gallery', 'project-desc', 'skills', 'contact', 'thanks'],
+            }
+        };
+
+        // --- 유틸리티 함수 ---
+        function hexToRgb(hex) {
+            let r = 0, g = 0, b = 0;
+            if (hex.length == 4) { r = "0x" + hex[1] + hex[1]; g = "0x" + hex[2] + hex[2]; b = "0x" + hex[3] + hex[3]; }
+            else if (hex.length == 7) { r = "0x" + hex[1] + hex[2]; g = "0x" + hex[3] + hex[4]; b = "0x" + hex[5] + hex[6]; }
+            return `rgb(${+r}, ${+g}, ${+b})`;
+        }
+
+        function hexToHsl(hex) {
+            const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+            if (!result) return [0, 0, 0];
+            let r = parseInt(result[1], 16) / 255, g = parseInt(result[2], 16) / 255, b = parseInt(result[3], 16) / 255;
+            const max = Math.max(r, g, b), min = Math.min(r, g, b);
+            let h, s, l = (max + min) / 2;
+            if (max == min) { h = s = 0; }
+            else {
+                const d = max - min;
+                s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+                switch (max) {
+                    case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+                    case g: h = (b - r) / d + 2; break;
+                    case b: h = (r - g) / d + 4; break;
+                }
+                h /= 6;
+            }
+            return [h, s, l];
+        }
+
+        function hslToHex(h, s, l) {
+            let r, g, b;
+            if (s == 0) { r = g = b = l; }
+            else {
+                const hue2rgb = (p, q, t) => {
+                    if (t < 0) t += 1; if (t > 1) t -= 1;
+                    if (t < 1 / 6) return p + (q - p) * 6 * t;
+                    if (t < 1 / 2) return q;
+                    if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+                    return p;
+                };
+                const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+                const p = 2 * l - q;
+                r = hue2rgb(p, q, h + 1 / 3); g = hue2rgb(p, q, h); b = hue2rgb(p, q, h - 1 / 3);
+            }
+            const toHex = x => { const hex = Math.round(x * 255).toString(16); return hex.length === 1 ? '0' + hex : hex; };
+            return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+        }
+
+
+        // --- 생성기 로직 ---
+        function generateSamples() {
+            const baseColorHex = document.getElementById('color-picker').value;
+            const samplesContainer = document.getElementById('samples-container');
+            samplesContainer.innerHTML = '<p class="col-span-full text-center text-gray-500 animate-pulse">AI가 최적의 색상 조합을 찾고 있습니다...</p>';
+
+            setTimeout(() => {
+                const palettes = [];
+                const [h, s, l] = hexToHsl(baseColorHex);
+                palettes.push({ name: '단색 조합', background: hslToHex(h, s * 0.5, 0.96), main: baseColorHex, sub: hslToHex(h, s, l * 0.5), accent: hslToHex(h, s, l * 1.2 > 1 ? 1 : l * 1.2) });
+                palettes.push({ name: '유사색 조합', background: '#ffffff', main: baseColorHex, sub: hslToHex((h + 0.08) % 1, s, l), accent: hslToHex((h + 0.16) % 1, s, l) });
+                palettes.push({ name: '보색 조합', background: hslToHex(h, s * 0.2, 0.98), main: baseColorHex, sub: hslToHex(h, s * 0.9, l * 0.4), accent: hslToHex((h + 0.5) % 1, s, l) });
+                palettes.push({ name: '분할 보색 조합', background: '#f9fafb', main: baseColorHex, sub: hslToHex((h + 0.42) % 1, s, l), accent: hslToHex((h + 0.58) % 1, s, l) });
+                palettes.push({ name: '삼색 조합', background: hslToHex(h, s * 0.1, 0.97), main: baseColorHex, sub: hslToHex((h + 1/3) % 1, s * 0.9, l), accent: hslToHex((h + 2/3) % 1, s, l) });
+                palettes.push({ name: '추천: 차분한 비즈니스', background: '#f8fafc', main: baseColorHex, sub: '#334155', accent: '#94a3b8' });
+                palettes.push({ name: '추천: 따뜻하고 창의적인', background: '#fffbeb', main: baseColorHex, sub: '#78350f', accent: '#f59e0b' });
+                palettes.push({ name: '추천: 현대적인 다크모드', background: '#1f2937', main: baseColorHex, sub: '#d1d5db', accent: '#9ca3af' });
+                palettes.push({ name: '추천: 자연 친화적인', background: '#f0fdf4', main: baseColorHex, sub: '#14532d', accent: '#22c55e' });
+                palettes.push({ name: '추천: 생동감 있는', background: '#ffffff', main: baseColorHex, sub: '#4338ca', accent: '#f43f5e' });
+                renderSamples(palettes);
+            }, 500);
+        }
+        
+        function generateArtistPalettes(artistId) {
+            const artist = artistData[artistId];
+            const finalPalettes = [];
+            
+            for (let i = 0; i < 4; i++) {
+                const theme = artist.base[i % artist.base.length];
+                const colors = [...theme.c];
+                finalPalettes.push({ name: `작품 참고: ${theme.n} #${i + 1}`, background: colors[(i + 3) % colors.length] || '#f8fafc', main: colors[i % colors.length], sub: colors[(i + 1) % colors.length], accent: colors[(i + 2) % colors.length], artistStyle: artist.style, artistName: artist.name });
+            }
+
+            const coreColors = artist.base.flatMap(theme => theme.c);
+            const uniqueCoreColors = [...new Set(coreColors)];
+
+            for (let i = 0; i < 3; i++) {
+                const baseColor = uniqueCoreColors[i % uniqueCoreColors.length];
+                const [h, s, l] = hexToHsl(baseColor);
+                let newMain, newSub, newAccent;
+                if (i % 2 === 0) { newMain = baseColor; newSub = hslToHex(h, s * 0.8, l * 0.6); newAccent = hslToHex((h + 0.5) % 1, s, l); }
+                else { newMain = baseColor; newSub = hslToHex((h + 1/3) % 1, s, l); newAccent = hslToHex((h + 2/3) % 1, s, l); }
+                finalPalettes.push({ name: `제작자 추천 #${i + 1}`, background: hslToHex(h, s * 0.2, 0.97), main: newMain, sub: newSub, accent: newAccent, artistStyle: artist.style, artistName: artist.name });
+            }
+            return finalPalettes;
+        }
+
+        function generateArtistSamples() {
+            const artistId = document.getElementById('artist-select').value;
+            const palettes = generateArtistPalettes(artistId);
+            renderSamples(palettes);
+        }
+
+        function generateWebSamples() {
+            const style = document.getElementById('web-style-select').value;
+            const purpose = document.getElementById('web-purpose-select').value;
+
+            const basePalette = webTemplateData.palettes[style];
+            const baseFonts = webTemplateData.fonts[style];
+            const baseLayouts = webTemplateData.layouts[purpose];
+
+            const finalSamples = [];
+            for (let i = 0; i < 7; i++) {
+                const [h, s, l] = hexToHsl(basePalette[1]);
+                const newAccent = hslToHex((h + 0.15 * i) % 1, s, l);
+
+                finalSamples.push({ name: `${style} 스타일 ${purpose} #${i + 1}`, background: basePalette[0], main: basePalette[1], sub: basePalette[2], accent: newAccent, font: baseFonts, layout: baseLayouts, type: 'web' });
+            }
+            renderSamples(finalSamples);
+        }
+
+        function switchPage(pageName) {
+            Object.values(buttons).forEach(button => button.classList.remove('active'));
+            buttons[pageName].classList.add('active');
+            mainContent.innerHTML = pages[pageName];
+
+            if (pageName === 'color') {
+                document.getElementById('generate-btn').addEventListener('click', generateSamples);
+                document.querySelectorAll('.recommended-color-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        document.getElementById('color-picker').value = e.target.dataset.color;
+                    });
+                });
+                generateSamples();
+            } 
+            else if (pageName === 'artist') {
+                document.getElementById('generate-artist-btn').addEventListener('click', generateArtistSamples);
+                generateArtistSamples();
+            }
+            else if (pageName === 'web') {
+                document.getElementById('generate-web-btn').addEventListener('click', generateWebSamples);
+                generateWebSamples();
+            }
+        }
+
+        function renderSamples(palettes) {
+            const samplesContainer = document.getElementById('samples-container');
+            samplesContainer.innerHTML = '';
+            palettes.forEach((palette) => {
+                const sampleCard = document.createElement('div');
+                sampleCard.className = 'bg-white p-6 rounded-lg shadow-md border border-gray-200 flex flex-col';
+                
+                let styleMarkup = '';
+                if(palette.artistStyle === 'dots') styleMarkup = '<div class="dot-pattern"></div>';
+                if(palette.artistStyle === 'texture') styleMarkup = '<div class="texture-pattern"></div>';
+                
+                const titleStyle = palette.artistStyle === 'lines' ? 'text-shadow: 2px 2px 0 #000, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000;' : '';
+
+                sampleCard.innerHTML = `
+                    <div class="flex-grow">
+                        <h3 class="font-bold text-lg mb-4" style="font-family: '${palette.font?.title || 'Noto Sans KR'}'">${palette.name}</h3>
+                        <div class="preview-slide rounded-lg mb-4" style="background-color: ${palette.background};">
+                            ${styleMarkup}
+                            <h4 class="text-2xl font-bold mb-2 z-10" style="color: ${palette.main}; ${titleStyle}; font-family: '${palette.font?.title || 'Noto Sans KR'}'">제목 텍스트 (Main)</h4>
+                            <p class="text-base mb-4 z-10" style="color: ${palette.sub}; font-family: '${palette.font?.body || 'Noto Sans KR'}'">본문 텍스트입니다. (Sub)</p>
+                            <div class="w-24 h-6 rounded z-10" style="background-color: ${palette.accent};"></div>
+                            <p class="text-xs mt-1 z-10" style="color: ${palette.accent};">강조 요소 (Accent)</p>
+                        </div>
+                        <div class="text-right">
+                            <button class="show-codes-btn text-sm text-indigo-600 hover:text-indigo-800 font-semibold py-1 px-2 rounded">
+                                색상코드 확인
+                            </button>
+                        </div>
+                    </div>
+                    <div class="mt-6 text-center">
+                        <button class="generate-ppt-btn bg-green-600 text-white font-bold py-2 px-5 rounded-lg hover:bg-green-700 transition-colors shadow w-full">
+                            PPT로 생성
+                        </button>
+                    </div>
+                `;
+                
+                sampleCard.querySelector('.show-codes-btn').addEventListener('click', () => showColorModal(palette));
+                sampleCard.querySelector('.generate-ppt-btn').addEventListener('click', () => createPpt(palette));
+                samplesContainer.appendChild(sampleCard);
+            });
+        }
+        
+        // --- 모달 로직 ---
+        const modalOverlay = document.getElementById('color-modal-overlay');
+        const modalTitle = document.getElementById('modal-title');
+        const modalBody = document.getElementById('modal-body');
+        const modalCloseBtn = document.getElementById('modal-close-btn');
+
+        function showColorModal(palette) {
+            modalTitle.textContent = `${palette.name} 색상 정보`;
+            modalBody.innerHTML = Object.entries(palette).filter(([key]) => !['name', 'artistStyle', 'artistName', 'type', 'font', 'layout'].includes(key)).map(([key, value]) => `
+                <div class="flex items-center justify-between text-sm py-1">
+                    <div class="flex items-center gap-3">
+                        <div class="color-swatch" style="background-color: ${value};"></div>
+                        <span class="font-semibold capitalize">${key}</span>
+                    </div>
+                    <div class="font-mono text-xs text-gray-600">
+                        <span>${value.toUpperCase()}</span> / <span>${hexToRgb(value)}</span>
+                    </div>
+                </div>
+            `).join('');
+            modalOverlay.classList.remove('hidden');
+            modalOverlay.classList.add('flex');
+        }
+        function hideColorModal() {
+            modalOverlay.classList.add('hidden');
+            modalOverlay.classList.remove('flex');
+        }
+        modalCloseBtn.addEventListener('click', hideColorModal);
+        modalOverlay.addEventListener('click', (e) => { if (e.target === modalOverlay) hideColorModal(); });
+
+        // --- PPT 생성 로직 ---
+        function createPpt(palette) {
+            let pptx = new PptxGenJS();
+            pptx.layout = 'LAYOUT_16x9';
+
+            if (palette.type === 'web') {
+                palette.layout.forEach(layoutType => {
+                    let slide = pptx.addSlide();
+                    slide.background = { color: palette.background.substring(1) };
+                    
+                    switch(layoutType) {
+                        case 'title':
+                            slide.addText('제목을 입력하세요', { x: 0.5, y: 2.5, w: '90%', h: 1, fontSize: 48, bold: true, color: palette.main.substring(1), align: 'center', fontFace: palette.font.title });
+                            slide.addText('부제목 또는 발표자 이름', { x: 0.5, y: 3.7, w: '90%', h: 0.7, fontSize: 24, color: palette.sub.substring(1), align: 'center', fontFace: palette.font.body });
+                            break;
+                        case 'problem':
+                             slide.addText('Problem / Issue', { x: 0.5, y: 0.5, w: '90%', h: 0.75, fontSize: 32, bold: true, color: palette.main.substring(1), fontFace: palette.font.title });
+                             slide.addText('현재 우리가 겪고 있는 문제점이나 이슈에 대해 기술합니다.', { x: 0.5, y: 1.5, w: '90%', h: 3, fontSize: 18, color: palette.sub.substring(1), fontFace: palette.font.body, bullet:true });
+                             break;
+                        case 'solution':
+                             slide.addText('Solution / Strategy', { x: 0.5, y: 0.5, w: '90%', h: 0.75, fontSize: 32, bold: true, color: palette.main.substring(1), fontFace: palette.font.title });
+                             slide.addText('문제 해결을 위한 구체적인 방법과 전략을 제시합니다.', { x: 0.5, y: 1.5, w: '90%', h: 3, fontSize: 18, color: palette.sub.substring(1), fontFace: palette.font.body, bullet:true });
+                             break;
+                        case 'data-chart':
+                            slide.addText('Data & Analysis', { x: 0.5, y: 0.5, w: '90%', h: 0.75, fontSize: 32, bold: true, color: palette.main.substring(1), fontFace: palette.font.title });
+                            let chartData = [{ name: '데이터 1', labels: ['항목1', '항목2', '항목3'], values: [15, 45, 25] }];
+                            slide.addChart(pptx.charts.BAR, chartData, { x: 0.5, y: 1.5, w: 9, h: 3.5, barDir: 'col',
+                                valueAxisLabelColor: palette.sub.substring(1),
+                                catAxisLabelColor: palette.sub.substring(1),
+                                dataLabelColor: palette.accent.substring(1),
+                                chartColors: [palette.accent.substring(1), palette.main.substring(1), palette.sub.substring(1)]
+                            });
+                            break;
+                        default:
+                            slide.addText(layoutType.replace('-', ' '), { x: 0.5, y: 0.5, w: '90%', h: 0.75, fontSize: 32, bold: true, color: palette.main.substring(1), fontFace: palette.font.title, capitalize: true });
+                            slide.addText('내용을 입력하세요.', { x: 0.5, y: 1.5, w: '90%', h: 3, fontSize: 18, color: palette.sub.substring(1), fontFace: palette.font.body });
+                    }
+                });
+            } else {
+                let masterOpts = {
+                    title: 'MASTER_SLIDE',
+                    background: { color: palette.background.substring(1) },
+                    objects: [ { text: { text: `Template by AI Designer - ${palette.artistName || 'Color Combo'}`, options: { x: '75%', y: '95%', fontSize: 8, color: palette.sub.substring(1), align: 'right' } } } ],
+                };
+
+                if (palette.artistStyle === 'dots') {
+                    const dotPattern = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMCIgaGVpZ2h0PSIxMCI+PHJlY3Qgd2lkdGg9IjEwIiBoZWlnaHQ9IjEwIiBmaWxsPSJ0cmFuc3BhcmVudCIvPjxjaXJjbGUgY3g9IjUiIGN5PSI1IiByPSIxIiBmaWxsPSJyZ2JhKDAsMCwwLDAuMikiLz48L3N2Zz4=";
+                    masterOpts.background.data = dotPattern;
+                } else if (palette.artistStyle === 'texture') {
+                    const texturePattern = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCIgdmlld0JveD0iMCAwIDQwIDQwIj48ZyBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNhOWE5YTkiIGZpbGwtb3BhY2l0eT0iMC4xIj48cGF0aCBkPSJNMTQgMTNsMS4zOTEuMzkxTDE0IDE0LjczVjEzbTcuMzYxIDguNzJMOC43MiAyOS4wODFsMS40MTQgMS40MTRMMjguNDUgMTIuMTYybC0xLjQxNC0xLjQxNEwxOS42NzYgMjAuMDhsMi4xMjEgMi4xMjFNNCAzMGw0LjI0My00LjI0M2wxLjQxNCAxLjQxNEw0IDMyLjgyOFYzMG0yMy4xNzIgMi4xNzJMMzYgMjMuNDVsLTEuNDE0LTEuNDE0TDI1LjczMiAzMC4zMmwyLjgzIDIuODNNMzYgNGwtMS40MTQgMS40MTRMMzYgNi44M1Y0bS0uNjg2IDE5LjU1N2wxLjQxNC0xLjQxNEwyMS4zNjQgMi43NzlsLTEuNDE0IDEuNDE0TDM1LjMxNCAyMy41NTd6TTQgMHYyLjgyOEw1LjQxNCAwbC0xLjQxNC0xLjQxNEw0IDB6bTIuODU4IDE0LjQyOGwxLjQxNC0xLjQxNEw1LjgzNiA5LjE3MmwzLjU0IDMuNTQtMS40MiAxLjQxTDEwLjQgOS4xN3ptMjQuMzA2IDQuMzA2bC0yLjgzIDIuODMtMi44My0yLjgzbDIuODMtMi44M2wyLjgzIDIuODN6TTMyLjI5IDE3LjFsMS40My0xLjQxLTEuNDEtMS40My0xLjQzIDEuNDF6bS0yNC4zMzYgMGwtMS40My0xLjQxIDEuNDEtMS40MyAxLjQzIDEuNDF6Ii8+PC9nPjwvZz48L3N2Zz4=";
+                    masterOpts.background.data = texturePattern;
+                }
+
+                pptx.defineSlideMaster(masterOpts);
+
+                let titleSlide = pptx.addSlide({ masterName: 'MASTER_SLIDE' });
+                let titleOpts = { x: 0.5, y: 2.5, w: '90%', h: 1, fontSize: 48, bold: true, color: palette.main.substring(1), align: 'center' };
+                
+                if (palette.artistStyle === 'lines') {
+                    titleOpts.shadow = { type: 'outer', color: '000000', blur: 1, offset: 2, angle: 45, opacity: 1 };
+                }
+                titleSlide.addText('PPT 제목을 입력하세요', titleOpts);
+                titleSlide.addText('부제목 또는 발표자 이름', { x: 0.5, y: 3.7, w: '90%', h: 0.7, fontSize: 24, color: palette.sub.substring(1), align: 'center' });
+                
+                if (palette.artistStyle === 'lines') {
+                    titleSlide.addShape(pptx.shapes.LINE, { x: 0.5, y: 2.3, w: 9.0, h: 0, line: { color: '000000', width: 3 } });
+                    titleSlide.addShape(pptx.shapes.LINE, { x: 0.5, y: 4.5, w: 9.0, h: 0, line: { color: '000000', width: 3 } });
+                } else {
+                    titleSlide.addShape(pptx.shapes.RECTANGLE, { x: '45%', y: '80%', w: '10%', h: 0.1, fill: { color: palette.accent.substring(1) } });
+                }
+
+                let contentSlide = pptx.addSlide({ masterName: 'MASTER_SLIDE' });
+                contentSlide.addText('주요 내용 제목', { x: 0.5, y: 0.5, w: '90%', h: 0.75, fontSize: 32, bold: true, color: palette.main.substring(1) });
+                contentSlide.addText('여기에 본문 내용을 입력하세요.\n- 글머리 기호 1: 보조 색상이 적용됩니다.\n- 글머리 기호 2: 가독성을 고려하여 디자인되었습니다.', { x: 0.5, y: 1.5, w: '90%', h: 3, fontSize: 18, color: palette.sub.substring(1), bullet: true });
+                contentSlide.addShape(pptx.shapes.OVAL, { x: 8.5, y: 4.0, w: 1.0, h: 1.0, fill: { color: palette.accent.substring(1) } });
+                contentSlide.addText('강조 포인트', { x: 8.0, y: 5.1, w: '20%', h: 0.5, fontSize: 14, color: palette.accent.substring(1) });
+            }
+
+            pptx.writeFile({ fileName: `Sample-Template-${palette.name}.pptx` });
+        }
+
+        // --- 초기화 ---
+        buttons.color.addEventListener('click', () => switchPage('color'));
+        buttons.artist.addEventListener('click', () => switchPage('artist'));
+        buttons.web.addEventListener('click', () => switchPage('web'));
+
+        // 초기 페이지 로드
+        switchPage('color');
+    </script>
+</body>
+</html>
