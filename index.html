@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>주소 시각화 및 구역 관리 시스템</title>
+    
+    <!-- Tailwind CSS (스타일링) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- SheetJS (엑셀 파일 읽기) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
+    <!-- Font Awesome (아이콘) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+    <style>
+        body { font-family: 'Noto Sans KR', sans-serif; overflow: hidden; }
+        #map { width: 100%; height: 100%; }
+        .list-row:hover { background-color: #f3f4f6; cursor: pointer; }
+        .selected-row { background-color: #dbeafe !important; }
+        /* 스크롤바 커스텀 */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #888; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #555; }
+    </style>
+</head>
+<body class="bg-gray-100 h-screen flex flex-col">
+
+    <!-- 1. 상단 헤더 (제어 패널) -->
+    <header class="bg-white shadow-md p-4 z-10 flex justify-between items-center h-16 shrink-0">
+        <div class="flex items-center gap-4">
+            <h1 class="text-xl font-bold text-gray-800"><i class="fa-solid fa-map-location-dot text-blue-600 mr-2"></i>구역 관리 시스템</h1>
+            
+            <!-- 엑셀 업로드 -->
+            <div class="relative">
+                <input type="file" id="excelFile" accept=".xlsx, .xls" class="hidden" onchange="handleFileUpload(event)">
+                <label for="excelFile" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded cursor-pointer text-sm transition">
+                    <i class="fa-solid fa-file-excel mr-2"></i>엑셀 업로드
+                </label>
+            </div>
+            
+            <!-- 진행률 표시 -->
+            <span id="statusMsg" class="text-sm text-gray-500 font-medium">대기 중...</span>
+        </div>
+
+        <div class="flex items-center gap-2">
+            <span class="text-xs text-gray-400 mr-2">구역 도구:</span>
+            <button onclick="selectOverlay('POLYGON')" class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded text-sm">
+                <i class="fa-solid fa-draw-polygon mr-1"></i>구역 그리기
+            </button>
+            <button onclick="clearAreas()" class="bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded text-sm">
+                <i class="fa-solid fa-eraser mr-1"></i>초기화
+            </button>
+        </div>
+    </header>
+
+    <!-- 2. 메인 컨텐츠 (좌: 지도 / 우: 리스트) -->
+    <main class="flex flex-1 overflow-hidden">
+        
+        <!-- 좌측: 지도 영역 (70%) -->
+        <div id="map-container" class="w-[70%] h-full relative border-r border-gray-300">
+            <div id="map"></div>
+            <!-- 지도 위 안내 메시지 -->
+            <div class="absolute top-4 left-1/2 transform -translate-x-1/2 bg-white/90 px-4 py-2 rounded shadow-lg text-sm font-semibold text-gray-700 z-20 hidden" id="drawGuide">
+                지도에 점을 찍어 다각형을 만드세요. (오른쪽 마우스 클릭: 종료)
+            </div>
+        </div>
+
+        <!-- 우측: 리스트 및 통계 영역 (30%) -->
+        <div class="w-[30%] flex flex-col bg-white h-full shadow-xl z-20">
+            
+            <!-- 통계 패널 -->
+            <div class="p-4 border-b bg-gray-50">
+                <h2 class="text-lg font-bold text-gray-700 mb-2">구역 현황판</h2>
+                <div class="grid grid-cols-2 gap-2">
+                    <div class="bg-white p-3 rounded border shadow-sm text-center">
+                        <div class="text-xs text-gray-500">전체 인원</div>
+                        <div class="text-xl font-bold text-gray-800" id="totalCount">0</div>
+                    </div>
+                    <div class="bg-blue-50 p-3 rounded border border-blue-100 shadow-sm text-center">
+                        <div class="text-xs text-blue-500 font-bold">구역 내 인원</div>
+                        <div class="text-xl font-bold text-blue-600" id="zoneCount">0</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 필터 및 검색 (추후 확장용) -->
+            <div class="p-2 bg-white border-b flex justify-between items-center">
+                <span class="text-xs text-gray-500 pl-2">※ 구역을 그리면 리스트가 자동 필터링됩니다.</span>
+                <button onclick="resetFilter()" class="text-xs text-gray-500 hover:text-blue-600 underline pr-2">필터 해제</button>
+            </div>
+
+            <!-- 리스트 테이블 -->
+            <div class="flex-1 overflow-y-auto">
+                <table class="w-full text-sm text-left text-gray-500">
+                    <thead class="text-xs text-gray-700 uppercase bg-gray-100 sticky top-0">
+                        <tr>
+                            <th scope="col" class="px-4 py-3">이름</th>
+                            <th scope="col" class="px-4 py-3">주소</th>
+                            <th scope="col" class="px-4 py-3 text-center">직분</th>
+                            <th scope="col" class="px-4 py-3 text-center">출석</th>
+                        </tr>
+                    </thead>
+                    <tbody id="personList">
+                        <!-- 자바스크립트로 데이터 로드됨 -->
+                        <tr>
+                            <td colspan="4" class="text-center py-10 text-gray-400">
+                                엑셀 파일을 업로드해주세요.<br>
+                                (컬럼: 이름, 주소, 직분, 출석여부)
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <!-- 카카오 지도 SDK (YOUR_KAKAO_API_KEY를 실제 키로 변경해야 함) -->
+    <!-- services 라이브러리: 주소 검색 / drawing 라이브러리: 구역 그리기 -->
+    <!-- 프로토콜을 https로 명시하여 로컬 파일 실행 시 오류 방지 -->
+    <script type="text/javascript" src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=1d9268593ca620c81ee6929f1f2de6a3&libraries=services,drawing"></script>
+
+    <script>
+        // --- 전역 변수 설정 ---
+        let map;
+        let geocoder;
+        let drawingManager;
+        let markers = []; // 지도에 표시된 마커 배열
+        let allData = []; // 엑셀에서 읽은 전체 데이터
+        let polygons = []; // 그려진 다각형 객체들
+
+        // --- 1. 초기화 (지도 생성) ---
+        window.onload = function() {
+            // kakao 객체 존재 여부 먼저 확인
+            if (!window.kakao || !window.kakao.maps) {
+                alert("카카오 지도 API가 로드되지 않았습니다.\n1. YOUR_KAKAO_API_KEY를 발급받은 키로 변경했는지 확인하세요.\n2. 인터넷 연결을 확인하세요.");
+                return;
+            }
+
+            // kakao.maps.load를 사용하여 안전하게 초기화
+            kakao.maps.load(function() {
+                const mapContainer = document.getElementById('map');
+                const mapOption = {
+                    center: new kakao.maps.LatLng(37.566826, 126.9786567), // 서울 시청 중심
+                    level: 7
+                };
+
+                map = new kakao.maps.Map(mapContainer, mapOption);
+                geocoder = new kakao.maps.services.Geocoder();
+
+                // 그리기 도구 초기화
+                const options = { 
+                    map: map, 
+                    drawingMode: [ 
+                        kakao.maps.drawing.OverlayType.POLYGON 
+                    ],
+                    guideTooltip: ['draw', 'drag', 'edit'], 
+                    polygonOptions: {
+                        draggable: true,
+                        removable: true,
+                        strokeColor: '#39f',
+                        fillColor: '#39f',
+                        fillOpacity: 0.4
+                    }
+                };
+                drawingManager = new kakao.maps.drawing.DrawingManager(options);
+
+                // 그리기 종료 이벤트 리스너 (구역 내 인원 계산 트리거)
+                drawingManager.addListener('drawend', function(data) {
+                    const target = data.target;
+                    polygons.push(target); // 관리 배열에 추가
+                    calculateInZone(target); // 계산 시작
+                });
+            });
+        };
+
+        // --- 2. 엑셀 파일 처리 ---
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+
+                if (jsonData.length === 0) {
+                    alert("데이터가 없습니다.");
+                    return;
+                }
+
+                processData(jsonData);
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        // --- 3. 주소 변환 및 마커 생성 (핵심 로직) ---
+        async function processData(data) {
+            // kakao API 로드 체크
+            if (!window.kakao || !window.kakao.maps) {
+                alert("지도가 로드되지 않아 데이터를 변환할 수 없습니다.");
+                return;
+            }
+
+            document.getElementById('statusMsg').innerText = `데이터 ${data.length}건 변환 중...`;
+            allData = []; // 초기화
+            
+            // 기존 마커 제거
+            markers.forEach(m => m.setMap(null));
+            markers = [];
+
+            let successCount = 0;
+
+            // 비동기 루프 처리를 위해 for...of 사용 (API 호출 속도 조절 필요시 delay 추가 가능)
+            for (const [index, row] of data.entries()) {
+                // 엑셀 컬럼명 매칭 (이름, 주소, 직분, 출석여부) - 유연하게 처리
+                const name = row['이름'] || row['Name'] || '이름미상';
+                const address = row['주소'] || row['Address'] || '';
+                const role = row['직분'] || row['Role'] || '-';
+                const attendance = row['출석여부'] || row['출석'] || 'X';
+
+                if (!address) continue;
+
+                // 주소 검색 (Promise 래핑)
+                await new Promise((resolve) => {
+                    geocoder.addressSearch(address, function(result, status) {
+                        if (status === kakao.maps.services.Status.OK) {
+                            const coords = new kakao.maps.LatLng(result[0].y, result[0].x);
+                            
+                            // 마커 생성
+                            const marker = new kakao.maps.Marker({
+                                map: map,
+                                position: coords,
+                                title: name
+                            });
+
+                            // 인포윈도우 (마우스 오버)
+                            const infowindow = new kakao.maps.InfoWindow({
+                                content: `<div style="padding:5px;font-size:12px;">${name} (${role})</div>`
+                            });
+                            kakao.maps.event.addListener(marker, 'mouseover', () => infowindow.open(map, marker));
+                            kakao.maps.event.addListener(marker, 'mouseout', () => infowindow.close());
+
+                            markers.push(marker);
+                            
+                            // 데이터 저장
+                            allData.push({
+                                id: index,
+                                name: name,
+                                address: address,
+                                role: role,
+                                attendance: attendance,
+                                lat: result[0].y,
+                                lng: result[0].x,
+                                marker: marker
+                            });
+                            successCount++;
+                        }
+                        resolve(); // 다음 루프로
+                    });
+                });
+                
+                // UI 업데이트 (진행률)
+                if (index % 5 === 0) {
+                    document.getElementById('statusMsg').innerText = `${index + 1}/${data.length} 처리 중...`;
+                }
+            }
+
+            document.getElementById('statusMsg').innerText = `완료: ${successCount}건 로드됨`;
+            document.getElementById('totalCount').innerText = successCount;
+            
+            // 전체 리스트 렌더링
+            renderTable(allData);
+
+            // 모든 마커가 보이도록 지도 범위 재설정
+            if (markers.length > 0) {
+                const bounds = new kakao.maps.LatLngBounds();
+                markers.forEach(m => bounds.extend(m.getPosition()));
+                map.setBounds(bounds);
+            }
+        }
+
+        // --- 4. 구역 그리기 제어 ---
+        function selectOverlay(type) {
+            if (!drawingManager) {
+                alert("지도 로드 중입니다. 잠시 후 다시 시도하세요.");
+                return;
+            }
+            // 그리기 모드 시작
+            drawingManager.cancel(); 
+            drawingManager.select(kakao.maps.drawing.OverlayType[type]);
+            document.getElementById('drawGuide').classList.remove('hidden');
+        }
+
+        function clearAreas() {
+            // 그려진 도형 모두 삭제 (API 문서 기준 DrawingManager undo/redo 제어 혹은 overlays 관리 필요)
+            // 여기서는 간단히 오버레이 전체 클리어 로직 구현이 복잡하므로, 새로고침 없이 데이터만 리셋하는 방식으로 구현
+            
+            // polygons 배열에 저장된 객체들 지도에서 제거
+            // Note: DrawingManager로 그린 객체는 manager.getData()로 관리되나, 
+            // 여기서는 편의상 필터링을 해제하고 안내함.
+            
+            alert("모든 구역 선택을 해제하고 전체 리스트를 표시합니다. (도형 삭제는 새로고침 필요)");
+            resetFilter();
+        }
+
+        // --- 5. 구역 내 인원 계산 (Point in Polygon 알고리즘) ---
+        function calculateInZone(polygon) {
+            document.getElementById('drawGuide').classList.add('hidden');
+            
+            // 다각형의 경로(좌표) 가져오기
+            const path = polygon.getPath(); // LatLng 객체의 배열
+            
+            const filteredData = allData.filter(person => {
+                const point = { x: parseFloat(person.lng), y: parseFloat(person.lat) };
+                return isInsidePolygon(point, path);
+            });
+
+            // 결과 업데이트
+            document.getElementById('zoneCount').innerText = filteredData.length;
+            renderTable(filteredData);
+            
+            // 마커 시각화 업데이트 (구역 밖 마커 흐리게 혹은 숨기기 - 선택사항)
+            // 여기서는 리스트만 필터링합니다.
+        }
+
+        // Ray-Casting 알고리즘: 점이 다각형 내부에 있는지 판별
+        function isInsidePolygon(point, path) {
+            let inside = false;
+            for (let i = 0, j = path.length - 1; i < path.length; j = i++) {
+                const xi = path[i].getLng(), yi = path[i].getLat();
+                const xj = path[j].getLng(), yj = path[j].getLat();
+
+                const intersect = ((yi > point.y) != (yj > point.y))
+                    && (point.x < (xj - xi) * (point.y - yi) / (yj - yi) + xi);
+                
+                if (intersect) inside = !inside;
+            }
+            return inside;
+        }
+
+        function resetFilter() {
+            renderTable(allData);
+            document.getElementById('zoneCount').innerText = 0;
+        }
+
+        // --- 6. 리스트 렌더링 ---
+        function renderTable(data) {
+            const tbody = document.getElementById('personList');
+            tbody.innerHTML = '';
+
+            if (data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" class="text-center py-4">해당 구역에 데이터가 없습니다.</td></tr>';
+                return;
+            }
+
+            data.forEach(item => {
+                const tr = document.createElement('tr');
+                tr.className = "border-b list-row transition";
+                tr.innerHTML = `
+                    <td class="px-4 py-2 font-medium text-gray-900">${item.name}</td>
+                    <td class="px-4 py-2 truncate max-w-[150px]" title="${item.address}">${item.address}</td>
+                    <td class="px-4 py-2 text-center">${item.role}</td>
+                    <td class="px-4 py-2 text-center">
+                        <span class="px-2 py-1 rounded text-xs text-white ${item.attendance === 'O' ? 'bg-green-500' : 'bg-gray-400'}">
+                            ${item.attendance}
+                        </span>
+                    </td>
+                `;
+                
+                // 리스트 클릭 시 해당 마커로 지도 이동
+                tr.onclick = () => {
+                    // 모든 행 하이라이트 제거
+                    document.querySelectorAll('.list-row').forEach(r => r.classList.remove('selected-row'));
+                    tr.classList.add('selected-row');
+                    
+                    // 지도 이동 및 인포윈도우 열기 (선택사항)
+                    map.panTo(item.marker.getPosition());
+                };
+
+                tbody.appendChild(tr);
+            });
+        }
+    </script>
+</body>
+</html>
