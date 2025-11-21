@@ -4,163 +4,111 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>주소 시각화 및 구역 관리 시스템</title>
-    
-    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- SheetJS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    
-    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 
     <style>
         body { font-family: 'Noto Sans KR', sans-serif; overflow: hidden; }
         #map { width: 100%; height: 100%; }
         
-        /* 리스트 스타일 */
         .list-row:hover { background-color: #f3f4f6; cursor: pointer; }
         .selected-row { background-color: #eff6ff !important; border-left: 4px solid #2563eb; }
+        .no-marker-row { background-color: #fff1f2; }
         
-        /* 구역 아이템 스타일 */
-        .zone-item { transition: all 0.2s; border-left-width: 6px; } 
-        .zone-item:hover { transform: translateX(2px); background-color: #f8fafc; }
-        .zone-selected { background-color: #eff6ff; box-shadow: inset 0 0 0 1px #bfdbfe; }
+        /* 체크박스 커스텀 */
+        input[type="checkbox"] { cursor: pointer; }
 
-        /* 테이블 리사이징 스타일 */
-        th { position: relative; }
-        .resizer {
-            position: absolute;
-            top: 0;
-            right: 0;
-            width: 5px;
-            cursor: col-resize;
-            user-select: none;
-            height: 100%;
-            background-color: transparent;
-        }
-        .resizer:hover, .resizing {
-            background-color: #3b82f6; /* 파란색 가이드 */
-        }
-
-        /* 스크롤바 커스텀 */
+        /* 통계 트리 스타일 */
+        .tree-item { transition: all 0.2s; }
+        .tree-header:hover { background-color: #f9fafb; }
+        
+        /* 스크롤바 */
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: #f1f1f1; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
         ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-
-        /* 통계 패널 스타일 */
-        .stat-group { border-bottom: 1px dashed #e5e7eb; padding-bottom: 8px; margin-bottom: 8px; }
-        .stat-group:last-child { border-bottom: none; }
     </style>
 </head>
 <body class="bg-gray-100 h-screen flex flex-col">
 
-    <!-- 1. 상단 헤더 -->
-    <header class="bg-white shadow-md px-6 py-3 z-20 flex justify-between items-center h-16 shrink-0 border-b border-gray-200">
-        <div class="flex items-center gap-6">
-            <h1 class="text-xl font-bold text-gray-800 flex items-center">
-                <i class="fa-solid fa-map-location-dot text-blue-600 text-2xl mr-3"></i>
-                <span>구역 관리 시스템</span>
+    <!-- 헤더 -->
+    <header class="bg-white shadow-sm px-6 py-3 z-20 flex justify-between items-center h-14 shrink-0 border-b">
+        <div class="flex items-center gap-4">
+            <h1 class="text-lg font-bold text-gray-800 flex items-center">
+                <i class="fa-solid fa-map-location-dot text-blue-600 text-xl mr-2"></i>
+                구역 관리
             </h1>
-            <div class="h-8 w-px bg-gray-300"></div>
-            
-            <!-- 파일 업로드 -->
-            <div class="flex items-center gap-3">
-                <div class="relative">
-                    <input type="file" id="excelFile" accept=".xlsx, .xls" class="hidden" onchange="handleFileUpload(event)">
-                    <label for="excelFile" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg cursor-pointer text-sm font-medium transition flex items-center shadow-sm">
-                        <i class="fa-solid fa-file-excel mr-2"></i>엑셀 업로드
-                    </label>
-                </div>
-                <span id="statusMsg" class="text-sm text-gray-500">준비 완료</span>
+            <div class="h-6 w-px bg-gray-300 mx-2"></div>
+            <div class="flex items-center gap-2">
+                <input type="file" id="excelFile" accept=".xlsx, .xls" class="hidden" onchange="handleFileUpload(event)">
+                <label for="excelFile" class="bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded text-sm cursor-pointer flex items-center shadow-sm transition">
+                    <i class="fa-solid fa-file-excel mr-2"></i>엑셀 업로드
+                </label>
+                <span id="statusMsg" class="text-xs text-gray-500 ml-2">준비됨</span>
             </div>
         </div>
-
-        <!-- 도구 모음 -->
-        <div class="flex items-center gap-2 bg-gray-100 p-1.5 rounded-lg">
-            <button onclick="selectOverlay('POLYGON')" class="flex items-center gap-2 px-3 py-1.5 bg-white hover:bg-blue-50 text-gray-700 rounded shadow-sm text-sm font-medium transition border border-gray-200 group">
-                <i class="fa-solid fa-draw-polygon text-blue-500 group-hover:scale-110 transition-transform"></i>
-                구역 그리기
-            </button>
-            <button onclick="resetAll()" class="flex items-center gap-2 px-3 py-1.5 bg-white hover:bg-red-50 text-gray-700 rounded shadow-sm text-sm font-medium transition border border-gray-200 group">
-                <i class="fa-solid fa-rotate-right text-red-500 group-hover:rotate-180 transition-transform duration-500"></i>
-                전체 초기화
-            </button>
-        </div>
+        <button onclick="resetAll()" class="text-xs bg-white border border-gray-300 hover:bg-red-50 text-gray-600 px-3 py-1.5 rounded transition">
+            <i class="fa-solid fa-rotate-right mr-1 text-red-400"></i>초기화
+        </button>
     </header>
 
-    <!-- 2. 메인 컨텐츠 -->
+    <!-- 메인 컨텐츠 -->
     <main class="flex flex-1 overflow-hidden">
-        <!-- 좌측: 지도 -->
-        <div id="map-container" class="w-[70%] h-full relative bg-gray-200">
+        <!-- 지도 영역 -->
+        <div id="map-container" class="w-[65%] h-full relative bg-gray-100 border-r">
             <div id="map"></div>
-            <div id="drawGuide" class="absolute top-6 left-1/2 transform -translate-x-1/2 bg-gray-800/90 text-white px-5 py-2.5 rounded-full shadow-xl text-sm font-medium z-50 hidden backdrop-blur-sm flex items-center gap-2 animate-bounce">
-                <i class="fa-solid fa-pen-nib"></i>
-                <span>지도에 점을 찍어 구역을 만드세요 (우클릭: 완료)</span>
-            </div>
         </div>
 
-        <!-- 우측: 패널 -->
-        <div class="w-[30%] flex flex-col bg-white h-full shadow-xl z-30 border-l border-gray-200">
+        <!-- 우측 패널 영역 -->
+        <div class="w-[35%] flex flex-col bg-white h-full shadow-xl z-30">
             
-            <!-- A. 통계 및 구역 현황 (탭으로 분리하지 않고 세로 배치) -->
-            <div class="flex flex-col h-[40%] border-b bg-gray-50">
-                <div class="p-3 border-b bg-white font-bold text-gray-700 flex justify-between">
-                    <span><i class="fa-solid fa-chart-pie mr-2 text-blue-500"></i>통계 현황판</span>
-                    <span class="text-xs font-normal bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full">총 <span id="totalCount">0</span>명</span>
+            <!-- 1. 상단: 통계 현황 (트리 구조) -->
+            <div class="h-[40%] flex flex-col border-b bg-white">
+                <div class="p-3 border-b bg-gray-50 font-bold text-gray-700 text-sm flex justify-between items-center">
+                    <span><i class="fa-solid fa-sitemap mr-2 text-blue-500"></i>조직 통계 및 필터</span>
+                    <span class="text-xs font-normal bg-white border px-2 py-0.5 rounded text-gray-500">총원: <span id="totalCount">0</span>명</span>
                 </div>
-                
-                <!-- 통계 리스트 스크롤 영역 -->
-                <div id="statsContainer" class="flex-1 overflow-y-auto p-3 text-sm">
-                    <div class="text-center py-10 text-gray-400 text-xs">
-                        데이터를 업로드하면<br>교구별/구역별 통계가 표시됩니다.
-                    </div>
-                </div>
-
-                <!-- 사용자 생성 구역 목록 헤더 -->
-                <div class="p-2 border-t border-b bg-gray-100 text-xs font-bold text-gray-600 flex justify-between items-center">
-                    <span><i class="fa-solid fa-layer-group mr-1"></i>사용자 지정 구역</span>
-                    <button onclick="viewAllData()" class="text-blue-600 hover:underline">전체보기</button>
-                </div>
-                <!-- 사용자 생성 구역 목록 -->
-                <div id="zoneListContainer" class="h-[80px] overflow-y-auto p-2 bg-white">
-                    <div class="text-center py-2 text-gray-400 text-xs italic">지정된 구역 없음</div>
+                <div id="statsTreeContainer" class="flex-1 overflow-y-auto p-2 space-y-2">
+                    <div class="text-center py-10 text-gray-400 text-xs">데이터를 업로드하세요.</div>
                 </div>
             </div>
 
-            <!-- B. 인원 리스트 (테이블) -->
-            <div class="flex-1 flex flex-col bg-white overflow-hidden">
-                <div class="p-2 bg-blue-50 border-b border-blue-100 text-xs font-bold text-blue-800 flex justify-between items-center sticky top-0">
-                    <span><i class="fa-solid fa-list mr-1"></i>인원 명단</span>
-                    <span id="currentFilterName" class="font-normal text-gray-600">전체 보기</span>
+            <!-- 2. 중단: 선택된 현황 요약 (새로 추가된 기능) -->
+            <div class="bg-blue-50 border-b border-blue-100 p-3 shrink-0 transition-all" id="selectionSummaryPanel">
+                <div class="flex justify-between items-center mb-1">
+                    <span class="text-xs font-bold text-blue-800"><i class="fa-solid fa-check-double mr-1"></i>현재 체크된 인원 현황</span>
+                    <span class="text-xs font-bold text-blue-600"><span id="selectedCount">0</span>명</span>
+                </div>
+                <!-- 선택된 소속별 요약 태그 -->
+                <div id="selectionTags" class="flex flex-wrap gap-1 max-h-[60px] overflow-y-auto text-[10px]">
+                    <span class="text-gray-400 px-1">선택된 인원이 없습니다.</span>
+                </div>
+            </div>
+
+            <!-- 3. 하단: 인원 명단 -->
+            <div class="flex-1 flex flex-col overflow-hidden">
+                <div class="p-2 bg-gray-50 border-b text-xs font-bold text-gray-600 flex justify-between items-center">
+                    <div class="flex items-center gap-2">
+                        <input type="checkbox" id="checkAll" onchange="toggleAll(this.checked)" checked class="rounded text-blue-600 focus:ring-0">
+                        <label for="checkAll" class="cursor-pointer">전체 선택/해제</label>
+                    </div>
+                    <span id="currentFilterName" class="font-normal text-gray-400">전체 목록</span>
                 </div>
 
-                <div class="flex-1 overflow-auto">
-                    <table id="resizeTable" class="w-full text-sm text-left border-collapse table-fixed">
-                        <thead class="text-xs text-gray-500 uppercase bg-gray-50 sticky top-0 z-10 shadow-sm">
+                <div class="flex-1 overflow-y-auto">
+                    <table class="w-full text-sm text-left border-collapse">
+                        <thead class="text-xs text-gray-500 uppercase bg-white sticky top-0 z-10 shadow-sm">
                             <tr>
-                                <th style="width: 80px;" class="px-2 py-3 font-semibold text-center border-r">
-                                    교구/구역<div class="resizer"></div>
+                                <th class="px-3 py-2 border-b w-8 text-center">
+                                    <i class="fa-solid fa-check text-gray-300"></i>
                                 </th>
-                                <th style="width: 80px;" class="px-2 py-3 font-semibold border-r">
-                                    이름<div class="resizer"></div>
-                                </th>
-                                <th style="width: 150px;" class="px-2 py-3 font-semibold border-r">
-                                    주소<div class="resizer"></div>
-                                </th>
-                                <th style="width: 50px;" class="px-2 py-3 text-center font-semibold">
-                                    출석<div class="resizer"></div>
-                                </th>
+                                <th class="px-2 py-2 border-b">정보</th>
+                                <th class="px-2 py-2 border-b text-right">소속/상태</th>
                             </tr>
                         </thead>
                         <tbody id="personList" class="divide-y divide-gray-100">
-                            <tr>
-                                <td colspan="4" class="text-center py-20 text-gray-400 flex flex-col items-center gap-3">
-                                    <i class="fa-solid fa-file-circle-question text-3xl text-gray-300"></i>
-                                    <span>데이터 대기 중</span>
-                                </td>
-                            </tr>
+                            <!-- 리스트 아이템 -->
                         </tbody>
                     </table>
                 </div>
@@ -168,151 +116,39 @@
         </div>
     </main>
 
-    <!-- 카카오 API -->
-    <script type="text/javascript" src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=1d9268593ca620c81ee6929f1f2de6a3&libraries=services,drawing"></script>
+    <script type="text/javascript" src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=YOUR_KAKAO_API_KEY&libraries=services"></script>
 
     <script>
         // --- 전역 변수 ---
-        let map, geocoder, drawingManager;
-        let allData = [];
-        let zones = [];   
-        let zoneCounter = 1; 
+        let map, geocoder;
+        let allData = []; // { id, name, address, parish, zone, group, role, attendance, lat, lng, marker, checked }
+        let stats = {};   // 계층적 통계 데이터
         let selectedMarker = null;
 
-        // 교구별 기본 색상 (HSL format)
+        // 교구별 색상
         const PARISH_COLORS = {
-            '1교구': { h: 220, s: 90, baseL: 50, hex: '#2563EB' }, // 파랑
-            '2교구': { h: 0,   s: 90, baseL: 50, hex: '#DC2626' }, // 빨강
-            '3교구': { h: 120, s: 90, baseL: 40, hex: '#16A34A' }, // 초록
-            '4교구': { h: 45,  s: 100, baseL: 50, hex: '#CA8A04' }, // 노랑
-            'default': { h: 0, s: 0, baseL: 50, hex: '#6B7280' }   // 회색
+            '1교구': { hex: '#2563EB', label: 'bg-blue-500' },
+            '2교구': { hex: '#DC2626', label: 'bg-red-500' },
+            '3교구': { hex: '#16A34A', label: 'bg-green-500' },
+            '4교구': { hex: '#CA8A04', label: 'bg-yellow-500' },
+            'default': { hex: '#6B7280', label: 'bg-gray-500' }
         };
 
-        // --- [핵심] SVG 마커 생성 (숫자 포함) ---
-        function createSvgMarkerUrl(colorHex, text) {
-            // text가 없으면 빈 문자열
-            const label = text ? text : "";
-            
-            // SVG 생성: 핀 모양 + 중앙 텍스트
-            const svgString = `
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="35" height="45">
-                    <path fill="${colorHex}" stroke="white" stroke-width="1" 
-                        d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>
-                    <circle cx="12" cy="9" r="4" fill="rgba(0,0,0,0.1)"/>
-                    <text x="12" y="13" font-size="10" font-weight="bold" fill="white" text-anchor="middle" font-family="sans-serif">
-                        ${label}
-                    </text>
-                </svg>`;
-            return 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svgString);
-        }
-
-        function getMarkerColor(parish, zone) {
-            let pInfo = PARISH_COLORS[parish] || PARISH_COLORS['default'];
-            let zNum = 1;
-            if (zone) {
-                const match = zone.match(/\d+/);
-                if (match) zNum = parseInt(match[0]);
-            }
-            let lightness = Math.min(90, pInfo.baseL + (zNum - 1) * 10);
-            return { 
-                hsl: `hsl(${pInfo.h}, ${pInfo.s}%, ${lightness}%)`,
-                baseHex: pInfo.hex,
-                zoneNum: zNum
-            };
-        }
-
-        // --- 1. 초기화 ---
+        // --- 초기화 ---
         window.onload = function() {
-            // 테이블 리사이징 기능 초기화
-            initTableResizer();
-
             if (!window.kakao || !window.kakao.maps) {
-                alert("API 로드 실패: YOUR_KAKAO_API_KEY를 확인하세요.");
+                alert("API 키를 확인해주세요.");
                 return;
             }
-
             kakao.maps.load(function() {
                 const container = document.getElementById('map');
                 const options = { center: new kakao.maps.LatLng(37.566826, 126.9786567), level: 7 };
                 map = new kakao.maps.Map(container, options);
-                
                 geocoder = new kakao.maps.services.Geocoder();
-
-                try {
-                    drawingManager = new kakao.maps.drawing.DrawingManager({
-                        map: map,
-                        drawingMode: [kakao.maps.drawing.OverlayType.POLYGON],
-                        guideTooltip: ['draw', 'drag', 'edit'],
-                        polygonOptions: {
-                            draggable: false, removable: false, strokeWeight: 2, strokeOpacity: 0.8, fillOpacity: 0.3
-                        }
-                    });
-                    drawingManager.addListener('drawend', handleDrawEnd);
-                } catch (e) { console.error(e); }
             });
         };
 
-        // --- 2. 테이블 컬럼 리사이징 로직 ---
-        function initTableResizer() {
-            const table = document.getElementById('resizeTable');
-            const cols = table.querySelectorAll('th');
-            
-            cols.forEach((col) => {
-                const resizer = col.querySelector('.resizer');
-                if (!resizer) return;
-
-                let x = 0;
-                let w = 0;
-
-                const mouseDownHandler = function(e) {
-                    x = e.clientX;
-                    const styles = window.getComputedStyle(col);
-                    w = parseInt(styles.width, 10);
-
-                    document.addEventListener('mousemove', mouseMoveHandler);
-                    document.addEventListener('mouseup', mouseUpHandler);
-                    resizer.classList.add('resizing');
-                };
-
-                const mouseMoveHandler = function(e) {
-                    const dx = e.clientX - x;
-                    col.style.width = `${w + dx}px`;
-                };
-
-                const mouseUpHandler = function() {
-                    document.removeEventListener('mousemove', mouseMoveHandler);
-                    document.removeEventListener('mouseup', mouseUpHandler);
-                    resizer.classList.remove('resizing');
-                };
-
-                resizer.addEventListener('mousedown', mouseDownHandler);
-            });
-        }
-
-        // --- 3. 그리기 핸들러 ---
-        function handleDrawEnd(data) {
-            try {
-                document.getElementById('drawGuide').classList.add('hidden');
-                const polygon = data.target;
-                const color = `hsl(${Math.floor(Math.random() * 360)}, 70%, 50%)`;
-                polygon.setOptions({ fillColor: color, strokeColor: color });
-
-                let insidePeople = [];
-                if (allData.length > 0) {
-                    const path = polygon.getPath();
-                    insidePeople = allData.filter(p => isInsidePolygon({x: p.lng, y: p.lat}, path));
-                }
-
-                const zoneId = zoneCounter++;
-                const zoneName = `지정 구역 ${zoneId}`;
-                
-                zones.push({ id: zoneId, name: zoneName, polygon: polygon, people: insidePeople, color: color });
-                renderZoneList();
-                setTimeout(() => filterByZone(zoneId), 100);
-            } catch (err) { console.error(err); }
-        }
-
-        // --- 4. 엑셀 처리 및 통계 집계 ---
+        // --- 데이터 처리 ---
         function handleFileUpload(event) {
             const file = event.target.files[0];
             if (!file) return;
@@ -330,295 +166,339 @@
         }
 
         async function processData(data) {
-            if (!geocoder || !map) { alert("지도 로딩 중..."); return; }
-            document.getElementById('statusMsg').innerText = `데이터 처리 중...`;
+            if (!geocoder) return;
+            document.getElementById('statusMsg').innerText = "처리 중...";
             
-            if(allData.length > 0) allData.forEach(d => d.marker.setMap(null));
+            // 기존 마커 제거
+            allData.forEach(d => { if(d.marker) d.marker.setMap(null); });
             allData = [];
             
-            let processed = 0;
-            // 통계 집계용 객체
-            let stats = {}; 
+            let tempValid = [], tempInvalid = [];
 
             for (const [idx, row] of data.entries()) {
-                const address = row['주소'] || row['Address'] || '';
-                if (!address) continue;
-
-                const name = row['이름'] || row['Name'] || '미상';
+                const name = row['이름'] || '미상';
                 const parish = row['교구'] || '미지정';
-                const zone = row['구역'] || '';
+                const zone = row['구역'] || '미지정';
+                const group = row['소속'] || '기타'; // [신규] 소속
+                const address = row['주소'] || '';
                 
-                // 색상 및 숫자 계산
-                const colorInfo = getMarkerColor(parish, zone);
-                // [핵심] 마커에 표시할 텍스트 (구역 숫자)
-                const markerText = colorInfo.zoneNum ? String(colorInfo.zoneNum) : "";
+                // 기본 데이터 객체
+                const person = {
+                    id: idx, name, address, parish, zone, group,
+                    role: row['직분'] || '-',
+                    attendance: row['출석여부'] || 'X',
+                    marker: null,
+                    markerText: zone.replace(/[^0-9]/g, ''), // 숫자만 추출
+                    checked: true // 기본 체크 상태
+                };
 
-                // 통계 집계
-                if (!stats[parish]) stats[parish] = { total: 0, zones: {} };
-                stats[parish].total++;
-                if (zone) {
-                    if (!stats[parish].zones[zone]) stats[parish].zones[zone] = 0;
-                    stats[parish].zones[zone]++;
-                }
+                if (address) {
+                    await new Promise(resolve => {
+                        geocoder.addressSearch(address, (result, status) => {
+                            if (status === kakao.maps.services.Status.OK) {
+                                const lat = parseFloat(result[0].y);
+                                const lng = parseFloat(result[0].x);
+                                const colorInfo = PARISH_COLORS[parish] || PARISH_COLORS['default'];
+                                const markerImg = createSvgMarker(colorInfo.hex, person.markerText);
 
-                const markerImageSrc = createSvgMarkerUrl(colorInfo.hsl, markerText);
-                const markerImage = new kakao.maps.MarkerImage(markerImageSrc, new kakao.maps.Size(35, 45), { offset: new kakao.maps.Point(17, 45) });
-
-                await new Promise(resolve => {
-                    geocoder.addressSearch(address, (result, status) => {
-                        if (status === kakao.maps.services.Status.OK) {
-                            const lat = parseFloat(result[0].y);
-                            const lng = parseFloat(result[0].x);
-                            
-                            const marker = new kakao.maps.Marker({
-                                map: map,
-                                position: new kakao.maps.LatLng(lat, lng),
-                                title: `${name} (${parish} ${zone})`,
-                                image: markerImage,
-                                zIndex: 1
-                            });
-
-                            const personData = { 
-                                id: idx, name, address, parish, zone,
-                                role: row['직분'] || '-', 
-                                attendance: row['출석여부'] || 'X',
-                                lat, lng, marker,
-                                originalImage: markerImage,
-                                markerText: markerText // 하이라이트 시 재생성 위해 저장
-                            };
-
-                            kakao.maps.event.addListener(marker, 'click', () => highlightPerson(personData));
-                            allData.push(personData);
-                            processed++;
-                        }
-                        resolve();
+                                person.marker = new kakao.maps.Marker({
+                                    map: map,
+                                    position: new kakao.maps.LatLng(lat, lng),
+                                    title: `${name} (${group})`,
+                                    image: markerImg,
+                                    zIndex: 1
+                                });
+                                person.originalImage = markerImg;
+                                
+                                kakao.maps.event.addListener(person.marker, 'click', () => {
+                                    highlightPerson(person.id);
+                                });
+                                tempValid.push(person);
+                            } else {
+                                tempInvalid.push(person);
+                            }
+                            resolve();
+                        });
                     });
-                });
-                if (idx % 10 === 0) document.getElementById('statusMsg').innerText = `${idx}/${data.length} 처리...`;
+                } else {
+                    tempInvalid.push(person);
+                }
+                if(idx % 10 === 0) document.getElementById('statusMsg').innerText = `${idx}건 처리...`;
             }
 
-            document.getElementById('statusMsg').innerText = `완료 (${processed}건)`;
-            document.getElementById('totalCount').innerText = processed;
-            
-            renderTable(allData);
-            renderStats(stats); // [신규] 통계 현황판 렌더링
+            allData = [...tempValid, ...tempInvalid];
+            document.getElementById('statusMsg').innerText = "완료";
+            document.getElementById('totalCount').innerText = allData.length;
 
-            if(allData.length > 0) {
+            // 통계 계산 및 UI 렌더링
+            updateStatsAndUI();
+            
+            // 지도 범위 조정
+            if (tempValid.length > 0) {
                 const bounds = new kakao.maps.LatLngBounds();
-                allData.forEach(d => bounds.extend(d.marker.getPosition()));
+                tempValid.forEach(d => bounds.extend(d.marker.getPosition()));
                 map.setBounds(bounds);
             }
         }
 
-        // --- 5. 통계 현황판 렌더링 함수 ---
-        function renderStats(stats) {
-            const container = document.getElementById('statsContainer');
+        // --- 핵심 로직: 통계 계산 및 트리 렌더링 ---
+        function updateStatsAndUI() {
+            // 1. 통계 집계 (전체 데이터 기준)
+            stats = {};
+            allData.forEach(p => {
+                if (!stats[p.parish]) stats[p.parish] = { total: 0, zones: {} };
+                stats[p.parish].total++;
+                
+                if (!stats[p.parish].zones[p.zone]) stats[p.parish].zones[p.zone] = { total: 0, groups: {} };
+                stats[p.parish].zones[p.zone].total++;
+                
+                if (!stats[p.parish].zones[p.zone].groups[p.group]) stats[p.parish].zones[p.zone].groups[p.group] = 0;
+                stats[p.parish].zones[p.zone].groups[p.group]++;
+            });
+
+            // 2. UI 렌더링
+            renderStatsTree();
+            renderPersonList();
+            updateSelectionSummary();
+        }
+
+        function renderStatsTree() {
+            const container = document.getElementById('statsTreeContainer');
             container.innerHTML = '';
 
-            // 교구 이름 순으로 정렬
-            Object.keys(stats).sort().forEach(parishName => {
-                const data = stats[parishName];
+            Object.keys(stats).sort().forEach(parish => {
+                const pData = stats[parish];
+                const colorClass = (PARISH_COLORS[parish] || PARISH_COLORS['default']).label;
                 
-                // 색상띠 색상 가져오기
-                const colorInfo = PARISH_COLORS[parishName] || PARISH_COLORS['default'];
+                // 교구 블록
+                const parishDiv = document.createElement('div');
+                parishDiv.className = "border rounded bg-white overflow-hidden shadow-sm text-sm";
                 
-                const div = document.createElement('div');
-                div.className = 'stat-group';
-                
-                let zonesHtml = '';
-                // 구역별 통계 (이름순 정렬)
-                Object.keys(data.zones).sort().forEach(zoneName => {
-                    zonesHtml += `
-                        <div class="flex justify-between text-xs text-gray-600 pl-4 py-0.5 hover:bg-gray-50 cursor-pointer" 
-                             onclick="filterByParishZone('${parishName}', '${zoneName}')">
-                            <span>└ ${zoneName}</span>
-                            <span class="font-medium">${data.zones[zoneName]}명</span>
+                // 교구 헤더
+                parishDiv.innerHTML = `
+                    <div class="flex items-center justify-between p-2 bg-gray-50 border-b cursor-pointer hover:bg-gray-100">
+                        <div class="flex items-center gap-2">
+                            <input type="checkbox" checked onchange="toggleGroup('parish', '${parish}', this.checked)" class="rounded text-blue-600 focus:ring-0">
+                            <span class="w-2 h-2 rounded-full ${colorClass}"></span>
+                            <span class="font-bold text-gray-800">${parish}</span>
+                        </div>
+                        <span class="text-xs font-bold bg-white border px-1.5 rounded">${pData.total}명</span>
+                    </div>
+                `;
+
+                // 구역 리스트
+                const zonesDiv = document.createElement('div');
+                zonesDiv.className = "divide-y divide-gray-100";
+
+                Object.keys(pData.zones).sort().forEach(zone => {
+                    const zData = pData.zones[zone];
+                    
+                    // 소속별 뱃지 생성
+                    let groupsHtml = '';
+                    Object.keys(zData.groups).sort().forEach(group => {
+                        groupsHtml += `
+                            <div class="flex items-center gap-1 bg-gray-50 px-1.5 py-0.5 rounded border text-[11px] text-gray-600 whitespace-nowrap">
+                                <input type="checkbox" checked onchange="toggleGroup('group', '${parish}|${zone}|${group}', this.checked)" class="w-3 h-3 rounded text-blue-600">
+                                <span>${group} ${zData.groups[group]}</span>
+                            </div>
+                        `;
+                    });
+
+                    zonesDiv.innerHTML += `
+                        <div class="p-2 pl-4">
+                            <div class="flex items-center gap-2 mb-1">
+                                <input type="checkbox" checked onchange="toggleGroup('zone', '${parish}|${zone}', this.checked)" class="rounded text-blue-600 focus:ring-0">
+                                <span class="font-semibold text-gray-700 text-xs">└ ${zone}</span>
+                                <span class="text-[10px] text-gray-400">(${zData.total}명)</span>
+                            </div>
+                            <div class="flex flex-wrap gap-1 pl-5">
+                                ${groupsHtml}
+                            </div>
                         </div>
                     `;
                 });
 
-                div.innerHTML = `
-                    <div class="flex justify-between items-center font-bold text-gray-800 text-sm mb-1 cursor-pointer hover:text-blue-600"
-                         onclick="filterByParish('${parishName}')">
-                        <div class="flex items-center gap-2">
-                            <span class="w-3 h-3 rounded-full shadow-sm" style="background-color: ${colorInfo.hex}"></span>
-                            ${parishName}
-                        </div>
-                        <span class="bg-gray-200 px-2 rounded-full text-xs">${data.total}명</span>
-                    </div>
-                    ${zonesHtml}
-                `;
-                container.appendChild(div);
+                parishDiv.appendChild(zonesDiv);
+                container.appendChild(parishDiv);
             });
         }
 
-        // --- 6. 필터링 함수들 ---
-        function filterByParish(parish) {
-            resetHighlights();
-            const filtered = allData.filter(p => p.parish === parish);
-            renderTable(filtered);
-            document.getElementById('currentFilterName').innerText = `${parish} 전체`;
-        }
+        // --- 체크박스 로직 & 지도 제어 ---
+        function toggleGroup(level, key, isChecked) {
+            // 데이터 상태 업데이트
+            allData.forEach(p => {
+                let match = false;
+                if (level === 'parish' && p.parish === key) match = true;
+                else if (level === 'zone') {
+                    const [pa, zo] = key.split('|');
+                    if (p.parish === pa && p.zone === zo) match = true;
+                }
+                else if (level === 'group') {
+                    const [pa, zo, gr] = key.split('|');
+                    if (p.parish === pa && p.zone === zo && p.group === gr) match = true;
+                }
 
-        function filterByParishZone(parish, zone) {
-            resetHighlights();
-            const filtered = allData.filter(p => p.parish === parish && p.zone === zone);
-            renderTable(filtered);
-            document.getElementById('currentFilterName').innerText = `${parish} > ${zone}`;
-        }
-
-        // --- 7. 기타 UI 함수 ---
-        function selectOverlay(type) {
-            if(!drawingManager) return;
-            drawingManager.cancel();
-            drawingManager.select(kakao.maps.drawing.OverlayType[type]);
-            document.getElementById('drawGuide').classList.remove('hidden');
-        }
-
-        function renderZoneList() {
-            const container = document.getElementById('zoneListContainer');
-            container.innerHTML = zones.length === 0 ? `<div class="text-center py-2 text-gray-400 text-xs italic">지정된 구역 없음</div>` : '';
-
-            zones.forEach(zone => {
-                const div = document.createElement('div');
-                div.className = `zone-item flex justify-between items-center p-2 bg-white border rounded shadow-sm cursor-pointer mb-2`;
-                div.style.borderLeftColor = zone.color;
-                div.setAttribute('data-id', zone.id);
-                div.onclick = () => filterByZone(zone.id);
-                div.innerHTML = `
-                    <span class="font-bold text-gray-700 text-xs">${zone.name}</span>
-                    <div class="flex items-center gap-2">
-                        <span class="bg-gray-100 text-gray-600 text-xs px-1.5 rounded">${zone.people.length}</span>
-                        <button onclick="deleteZone(event, ${zone.id})" class="text-gray-400 hover:text-red-500"><i class="fa-solid fa-trash-can"></i></button>
-                    </div>
-                `;
-                container.appendChild(div);
+                if (match) {
+                    p.checked = isChecked;
+                    updateMarkerVisibility(p);
+                }
             });
+            
+            // UI 갱신
+            renderPersonList(); // 리스트 체크박스 동기화
+            updateSelectionSummary(); // 요약바 갱신
         }
 
-        function filterByZone(zoneId) {
-            const zone = zones.find(z => z.id === zoneId);
-            if (!zone) return;
-            resetHighlights();
-            
-            // 구역 선택 UI 처리
-            document.querySelectorAll('.zone-item').forEach(el => el.classList.remove('zone-selected'));
-            const item = document.querySelector(`.zone-item[data-id='${zoneId}']`);
-            if(item) item.classList.add('zone-selected');
-            
-            document.getElementById('currentFilterName').innerText = zone.name;
-            renderTable(zone.people);
-        }
-
-        function deleteZone(e, zoneId) {
-            e.stopPropagation();
-            if(!confirm("삭제하시겠습니까?")) return;
-            const idx = zones.findIndex(z => z.id === zoneId);
-            if(idx > -1) {
-                zones[idx].polygon.setMap(null);
-                zones.splice(idx, 1);
-                renderZoneList();
-                viewAllData();
+        function togglePerson(id, isChecked) {
+            const person = allData.find(p => p.id === id);
+            if (person) {
+                person.checked = isChecked;
+                updateMarkerVisibility(person);
+                updateSelectionSummary();
             }
         }
 
-        function viewAllData() {
-            resetHighlights();
-            document.getElementById('currentFilterName').innerText = "전체 보기";
-            renderTable(allData);
+        function toggleAll(isChecked) {
+            allData.forEach(p => {
+                p.checked = isChecked;
+                updateMarkerVisibility(p);
+            });
+            // 통계 트리의 모든 체크박스 상태 변경 (단순화: 실제 DOM 조작 대신 데이터 기반 리렌더링이 나음, 여기선 데이터만)
+            const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+            checkboxes.forEach(cb => cb.checked = isChecked);
+            
+            renderPersonList();
+            updateSelectionSummary();
+        }
+
+        function updateMarkerVisibility(person) {
+            if (person.marker) {
+                person.marker.setMap(person.checked ? map : null);
+            }
+        }
+
+        // --- 선택 현황 요약바 업데이트 ---
+        function updateSelectionSummary() {
+            const checkedData = allData.filter(p => p.checked);
+            document.getElementById('selectedCount').innerText = checkedData.length;
+
+            const container = document.getElementById('selectionTags');
+            container.innerHTML = '';
+
+            if (checkedData.length === 0) {
+                container.innerHTML = '<span class="text-gray-400 px-1">선택된 인원이 없습니다.</span>';
+                return;
+            }
+
+            // 요약 집계 (소속별 카운트)
+            const summary = {};
+            checkedData.forEach(p => {
+                if (!summary[p.group]) summary[p.group] = 0;
+                summary[p.group]++;
+            });
+
+            Object.keys(summary).sort().forEach(group => {
+                const tag = document.createElement('span');
+                tag.className = "bg-white text-blue-600 border border-blue-200 px-1.5 py-0.5 rounded shadow-sm font-medium";
+                tag.innerText = `${group} ${summary[group]}`;
+                container.appendChild(tag);
+            });
+        }
+
+        // --- 리스트 렌더링 ---
+        function renderPersonList() {
+            const tbody = document.getElementById('personList');
+            tbody.innerHTML = '';
+
+            // 성능을 위해 상위 200개만 렌더링하거나 페이지네이션 필요하지만 여기선 전체
+            // 전체 렌더링 시 속도 저하 방지를 위해 DocumentFragment 사용
+            const fragment = document.createDocumentFragment();
+
+            allData.forEach(p => {
+                const tr = document.createElement('tr');
+                tr.id = `row-${p.id}`;
+                tr.className = `border-b list-row ${p.address ? '' : 'no-marker-row'}`;
+                
+                const colorHex = (PARISH_COLORS[p.parish] || PARISH_COLORS['default']).hex;
+
+                tr.innerHTML = `
+                    <td class="px-3 py-2 text-center">
+                        <input type="checkbox" ${p.checked ? 'checked' : ''} onchange="togglePerson(${p.id}, this.checked)" class="rounded text-blue-600 focus:ring-0">
+                    </td>
+                    <td class="px-2 py-2" onclick="highlightPerson(${p.id})">
+                        <div class="font-bold text-gray-800 text-sm">${p.name} <span class="font-normal text-xs text-gray-500">(${p.role})</span></div>
+                        <div class="text-xs text-gray-400 truncate w-[120px]">${p.address || '주소 없음'}</div>
+                    </td>
+                    <td class="px-2 py-2 text-right" onclick="highlightPerson(${p.id})">
+                        <div class="text-xs font-bold" style="color: ${colorHex}">${p.parish} ${p.zone}</div>
+                        <div class="text-xs bg-gray-100 inline-block px-1 rounded text-gray-600 mt-0.5">${p.group}</div>
+                    </td>
+                `;
+                fragment.appendChild(tr);
+            });
+            tbody.appendChild(fragment);
+        }
+
+        // --- 유틸리티 ---
+        function createSvgMarker(color, text) {
+            const svg = `
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="35" height="45">
+                    <path fill="${color}" stroke="white" stroke-width="1" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>
+                    <circle cx="12" cy="9" r="4" fill="rgba(0,0,0,0.1)"/>
+                    <text x="12" y="13" font-size="10" font-weight="bold" fill="white" text-anchor="middle" font-family="sans-serif">${text}</text>
+                </svg>`;
+            return new kakao.maps.MarkerImage('data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg), new kakao.maps.Size(35, 45), { offset: new kakao.maps.Point(17, 45) });
+        }
+
+        function highlightPerson(id) {
+            const person = allData.find(p => p.id === id);
+            if (!person) return;
+            
+            // 선택 리셋
+            if(selectedMarker) {
+                const prev = allData.find(p => p.marker === selectedMarker);
+                if(prev) {
+                    prev.marker.setImage(prev.originalImage);
+                    prev.marker.setZIndex(1);
+                }
+            }
+
+            // 하이라이트 적용
+            if (person.marker) {
+                if (!person.checked) {
+                    alert("체크 해제된 인원입니다. 지도에서 보려면 체크해주세요.");
+                    person.checked = true;
+                    updateMarkerVisibility(person);
+                    updateSelectionSummary();
+                    document.querySelector(`#row-${id} input`).checked = true;
+                }
+                const highlightImg = createSvgMarker('#FF0000', person.markerText);
+                person.marker.setImage(highlightImg);
+                person.marker.setZIndex(999);
+                selectedMarker = person.marker;
+                map.panTo(person.marker.getPosition());
+            } else {
+                alert("위치 정보가 없는 인원입니다.");
+            }
+
+            // 리스트 스크롤
+            document.querySelectorAll('.selected-row').forEach(el => el.classList.remove('selected-row'));
+            const row = document.getElementById(`row-${id}`);
+            if(row) {
+                row.classList.add('selected-row');
+                row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
         }
 
         function resetAll() {
             if(!confirm("초기화 하시겠습니까?")) return;
-            zones.forEach(z => z.polygon.setMap(null));
-            zones = [];
-            allData.forEach(d => d.marker.setMap(null));
+            allData.forEach(d => { if(d.marker) d.marker.setMap(null); });
             allData = [];
-            zoneCounter = 1;
-            renderZoneList();
-            document.getElementById('statsContainer').innerHTML = '';
-            renderTable([]);
-            document.getElementById('totalCount').innerText = "0";
-        }
-
-        function resetHighlights() {
-             document.querySelectorAll('.zone-item').forEach(el => el.classList.remove('zone-selected'));
-        }
-
-        function highlightPerson(person) {
-            if (selectedMarker && selectedMarker !== person.marker) {
-                const prevData = allData.find(p => p.marker === selectedMarker);
-                if (prevData) selectedMarker.setImage(prevData.originalImage);
-                selectedMarker.setZIndex(1);
-            }
-            
-            // 하이라이트 마커 (빨간색 + 기존 텍스트 유지)
-            const selectedImgSrc = createSvgMarkerUrl('#FF0000', person.markerText);
-            const selectedImg = new kakao.maps.MarkerImage(selectedImgSrc, new kakao.maps.Size(40, 50), { offset: new kakao.maps.Point(20, 50) });
-            
-            person.marker.setImage(selectedImg);
-            person.marker.setZIndex(999);
-            selectedMarker = person.marker;
-            map.panTo(person.marker.getPosition());
-
-            document.querySelectorAll('.list-row').forEach(r => r.classList.remove('selected-row'));
-            const targetRow = document.getElementById(`row-${person.id}`);
-            if (targetRow) {
-                targetRow.classList.add('selected-row');
-                targetRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }
-        }
-
-        function renderTable(data) {
-            const tbody = document.getElementById('personList');
-            tbody.innerHTML = '';
-            if (data.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="4" class="text-center py-10 text-gray-400">데이터가 없습니다.</td></tr>`;
-                return;
-            }
-            data.forEach(item => {
-                const tr = document.createElement('tr');
-                tr.id = `row-${item.id}`;
-                tr.className = "border-b list-row hover:bg-gray-50";
-                
-                const colorInfo = getMarkerColor(item.parish, item.zone);
-                // 뱃지 스타일: 배경은 연하게, 글자는 진하게
-                const badgeStyle = `background-color: ${colorInfo.hsl.replace('hsl', 'hsla').replace(')', ', 0.1)')}; 
-                                    color: ${colorInfo.baseHex}; border: 1px solid ${colorInfo.baseHex}33;`;
-
-                tr.innerHTML = `
-                    <td class="px-2 py-2 text-center border-r border-gray-100">
-                        <span class="text-xs font-bold px-2 py-1 rounded whitespace-nowrap" style="${badgeStyle}">
-                            ${item.parish} ${item.zone}
-                        </span>
-                    </td>
-                    <td class="px-2 py-2 font-medium text-gray-800 text-sm border-r border-gray-100">
-                        ${item.name} <span class="text-xs text-gray-400">(${item.role})</span>
-                    </td>
-                    <td class="px-2 py-2 text-xs text-gray-500 truncate border-r border-gray-100" title="${item.address}">
-                        ${item.address}
-                    </td>
-                    <td class="px-2 py-2 text-center">
-                        <span class="px-2 py-0.5 rounded-full text-xs font-bold text-white ${item.attendance === 'O' ? 'bg-green-500' : 'bg-gray-400'}">
-                            ${item.attendance}
-                        </span>
-                    </td>
-                `;
-                tr.onclick = () => highlightPerson(item);
-                tbody.appendChild(tr);
-            });
-        }
-
-        function isInsidePolygon(point, path) {
-            let inside = false;
-            const x = point.x, y = point.y;
-            for (let i = 0, j = path.length - 1; i < path.length; j = i++) {
-                const xi = path[i].getLng(), yi = path[i].getLat();
-                const xj = path[j].getLng(), yj = path[j].getLat();
-                const intersect = ((yi > y) != (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
-                if (intersect) inside = !inside;
-            }
-            return inside;
+            document.getElementById('statsTreeContainer').innerHTML = '<div class="text-center py-10 text-gray-400 text-xs">데이터를 업로드하세요.</div>';
+            document.getElementById('personList').innerHTML = '';
+            document.getElementById('totalCount').innerText = '0';
+            document.getElementById('selectedCount').innerText = '0';
+            document.getElementById('selectionTags').innerHTML = '';
         }
     </script>
 </body>
