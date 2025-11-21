@@ -16,31 +16,101 @@
         .selected-row { background-color: #eff6ff !important; border-left: 4px solid #2563eb; }
         .no-marker-row { background-color: #fff1f2; }
         
-        /* 모달 스타일 */
+        /* 모달 */
         .modal-overlay { background-color: rgba(0, 0, 0, 0.5); }
-        
-        /* 체크박스 커스텀 */
         input[type="checkbox"] { cursor: pointer; }
 
-        /* 테이블 스타일 및 리사이징 */
+        /* 리사이징 */
         th { white-space: nowrap; position: relative; }
-        
         .resizer {
             position: absolute; top: 0; right: 0; width: 4px; cursor: col-resize;
             user-select: none; height: 100%; background-color: transparent; z-index: 10;
         }
         .resizer:hover, .resizing { background-color: #3b82f6; width: 4px; }
         
+        /* 스크롤바 */
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: #f1f1f1; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
         ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        /* --- [핵심] 인쇄 전용 스타일 (Print CSS) --- */
+        @media print {
+            @page { size: A4; margin: 10mm; }
+            
+            /* 전체 레이아웃 초기화 */
+            body, html { 
+                height: auto !important; 
+                overflow: visible !important; 
+                background: white !important;
+            }
+            
+            /* 화면 숨김 요소들 */
+            header, 
+            #drawGuide, 
+            .no-print,
+            .resizer,
+            #statsSection, /* 통계 영역 숨김 */
+            #selectionSummaryPanel, /* 요약바 숨김 */
+            #filterSection, /* 필터바 숨김 */
+            th:first-child, td:first-child, /* 체크박스 열 숨김 */
+            th:last-child, td:last-child    /* 수정버튼 열 숨김 */
+            { display: none !important; }
+
+            /* 1. 지도 (첫 페이지) */
+            main { display: block !important; height: auto !important; }
+            
+            #map-container {
+                position: relative !important;
+                width: 100% !important;
+                height: 95vh !important; /* 첫 페이지 꽉 채우기 */
+                page-break-after: always !important; /* 지도 뒤 강제 페이지 넘김 */
+                border: 2px solid #000;
+                margin-bottom: 20px;
+            }
+
+            /* 2. 명단 (두 번째 페이지부터) */
+            #rightPanel {
+                width: 100% !important;
+                height: auto !important;
+                border: none !important;
+                box-shadow: none !important;
+                display: block !important;
+            }
+
+            #listContainer {
+                height: auto !important;
+                overflow: visible !important;
+                display: block !important;
+            }
+
+            table {
+                width: 100% !important;
+                border-collapse: collapse !important;
+                font-size: 11pt !important;
+            }
+
+            thead { display: table-header-group !important; }
+            tbody { display: table-row-group !important; }
+            tr { page-break-inside: avoid; }
+
+            th, td {
+                border: 1px solid #000 !important;
+                padding: 8px !important;
+                color: #000 !important;
+            }
+            
+            /* 인쇄용 제목 표시 */
+            #printTitle { display: block !important; text-align: center; font-size: 24px; margin-bottom: 20px; font-weight: bold; }
+        }
+        
+        #printTitle { display: none; } /* 평소엔 숨김 */
     </style>
 </head>
 <body class="bg-gray-100 h-screen flex flex-col">
 
     <!-- 헤더 -->
-    <header class="bg-white shadow-sm px-6 py-3 z-20 flex justify-between items-center h-14 shrink-0 border-b">
+    <header class="bg-white shadow-sm px-6 py-3 z-20 flex justify-between items-center h-14 shrink-0 border-b no-print">
         <div class="flex items-center gap-4">
             <h1 class="text-lg font-bold text-gray-800 flex items-center">
                 <i class="fa-solid fa-map-location-dot text-blue-600 text-xl mr-2"></i>
@@ -48,19 +118,20 @@
             </h1>
             <div class="h-6 w-px bg-gray-300 mx-2"></div>
             <div class="flex items-center gap-2">
-                <button onclick="downloadSample()" class="bg-gray-500 hover:bg-gray-600 text-white px-3 py-1.5 rounded text-sm cursor-pointer flex items-center shadow-sm transition">
+                <button onclick="downloadSample()" class="bg-gray-500 hover:bg-gray-600 text-white px-3 py-1.5 rounded text-sm transition shadow-sm">
                     <i class="fa-solid fa-file-arrow-down mr-2"></i>양식
                 </button>
-
                 <input type="file" id="excelFile" accept=".xlsx, .xls" class="hidden" onchange="handleFileUpload(event)">
-                <label for="excelFile" class="bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded text-sm cursor-pointer flex items-center shadow-sm transition">
+                <label for="excelFile" class="bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded text-sm cursor-pointer transition shadow-sm">
                     <i class="fa-solid fa-file-excel mr-2"></i>업로드
                 </label>
-                
-                <button onclick="exportToExcel()" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded text-sm cursor-pointer flex items-center shadow-sm transition">
-                    <i class="fa-solid fa-floppy-disk mr-2"></i>엑셀 저장
+                <button onclick="exportToExcel()" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded text-sm transition shadow-sm">
+                    <i class="fa-solid fa-floppy-disk mr-2"></i>저장
                 </button>
-
+                <!-- [신규] 인쇄 버튼 -->
+                <button onclick="window.print()" class="bg-gray-700 hover:bg-gray-800 text-white px-3 py-1.5 rounded text-sm transition shadow-sm">
+                    <i class="fa-solid fa-print mr-2"></i>인쇄
+                </button>
                 <span id="statusMsg" class="text-xs text-gray-500 ml-2">준비됨</span>
             </div>
         </div>
@@ -71,16 +142,19 @@
 
     <!-- 메인 컨텐츠 -->
     <main class="flex flex-1 overflow-hidden">
-        <!-- 지도 영역 -->
+        <!-- 좌측: 지도 -->
         <div id="map-container" class="w-[65%] h-full relative bg-gray-100 border-r">
             <div id="map"></div>
         </div>
 
-        <!-- 우측 패널 영역 -->
-        <div class="w-[35%] flex flex-col bg-white h-full shadow-xl z-30">
+        <!-- 우측: 패널 -->
+        <div id="rightPanel" class="w-[35%] flex flex-col bg-white h-full shadow-xl z-30">
             
-            <!-- 1. 상단: 통계 현황 -->
-            <div class="h-[35%] flex flex-col border-b bg-white">
+            <!-- [신규] 인쇄 시에만 보이는 제목 -->
+            <div id="printTitle">구역 현황 명단</div>
+
+            <!-- 1. 상단: 통계 (인쇄 시 숨김) -->
+            <div id="statsSection" class="h-[35%] flex flex-col border-b bg-white no-print">
                 <div class="p-3 border-b bg-gray-50 font-bold text-gray-700 text-sm flex justify-between items-center">
                     <span><i class="fa-solid fa-sitemap mr-2 text-blue-500"></i>조직 통계</span>
                     <span class="text-xs font-normal bg-white border px-2 py-0.5 rounded text-gray-500">총원: <span id="totalCount">0</span>명</span>
@@ -90,8 +164,8 @@
                 </div>
             </div>
 
-            <!-- 2. 중단: 선택 요약 -->
-            <div class="bg-blue-50 border-b border-blue-100 p-2 shrink-0 transition-all text-xs" id="selectionSummaryPanel">
+            <!-- 2. 중단: 선택 요약 (인쇄 시 숨김) -->
+            <div id="selectionSummaryPanel" class="bg-blue-50 border-b border-blue-100 p-2 shrink-0 transition-all text-xs no-print">
                 <div class="flex justify-between items-center mb-1">
                     <span class="font-bold text-blue-800"><i class="fa-solid fa-check-double mr-1"></i>체크된 인원</span>
                     <span class="font-bold text-blue-600"><span id="selectedCount">0</span>명</span>
@@ -101,10 +175,10 @@
                 </div>
             </div>
 
-            <!-- 3. 하단: 인원 명단 (필터 추가) -->
-            <div class="flex-1 flex flex-col overflow-hidden">
-                <!-- [신규] 필터 컨트롤 바 -->
-                <div class="p-2 bg-gray-100 border-b flex flex-col gap-2">
+            <!-- 3. 하단: 인원 명단 -->
+            <div id="listContainer" class="flex-1 flex flex-col overflow-hidden">
+                <!-- 필터 바 (인쇄 시 숨김) -->
+                <div id="filterSection" class="p-2 bg-gray-100 border-b flex flex-col gap-2 no-print">
                     <div class="flex gap-2 text-xs">
                         <select id="filterParish" onchange="applyListFilter()" class="border rounded px-2 py-1 flex-1 bg-white">
                             <option value="">전체 교구</option>
@@ -125,17 +199,18 @@
                     </div>
                 </div>
 
+                <!-- 테이블 -->
                 <div class="flex-1 overflow-y-auto overflow-x-auto">
                     <table id="resizeTable" class="w-full text-sm text-left border-collapse table-fixed min-w-[400px]">
                         <thead class="text-xs text-gray-500 uppercase bg-white sticky top-0 z-10 shadow-sm select-none">
                             <tr>
-                                <th class="px-2 py-2 border-b w-8 text-center"><i class="fa-solid fa-check text-gray-300"></i></th>
-                                <th class="px-2 py-2 border-b w-20 text-center">교구/구역<div class="resizer"></div></th>
-                                <th class="px-2 py-2 border-b w-20">이름<div class="resizer"></div></th>
-                                <th class="px-2 py-2 border-b w-16">직분<div class="resizer"></div></th>
-                                <th class="px-2 py-2 border-b">주소<div class="resizer"></div></th>
-                                <th class="px-2 py-2 border-b w-12 text-center">출석<div class="resizer"></div></th>
-                                <th class="px-2 py-2 border-b w-10 text-center"><i class="fa-solid fa-pen-to-square"></i></th>
+                                <th class="px-2 py-2 border-b w-8 text-center no-print"><i class="fa-solid fa-check text-gray-300"></i></th>
+                                <th class="px-2 py-2 border-b w-20 text-center">교구/구역<div class="resizer no-print"></div></th>
+                                <th class="px-2 py-2 border-b w-20">이름<div class="resizer no-print"></div></th>
+                                <th class="px-2 py-2 border-b w-16">직분<div class="resizer no-print"></div></th>
+                                <th class="px-2 py-2 border-b">주소<div class="resizer no-print"></div></th>
+                                <th class="px-2 py-2 border-b w-12 text-center">출석<div class="resizer no-print"></div></th>
+                                <th class="px-2 py-2 border-b w-10 text-center no-print"><i class="fa-solid fa-pen-to-square"></i></th>
                             </tr>
                         </thead>
                         <tbody id="personList" class="divide-y divide-gray-100">
@@ -148,7 +223,7 @@
     </main>
 
     <!-- 수정 모달 -->
-    <div id="editModal" class="fixed inset-0 z-50 hidden flex items-center justify-center modal-overlay">
+    <div id="editModal" class="fixed inset-0 z-50 hidden flex items-center justify-center modal-overlay no-print">
         <div class="bg-white rounded-lg shadow-lg w-[400px] p-6 relative">
             <h3 class="text-lg font-bold text-gray-800 mb-4 border-b pb-2"><i class="fa-solid fa-user-pen mr-2 text-blue-600"></i>정보 수정</h3>
             <input type="hidden" id="editId">
@@ -235,25 +310,19 @@
             });
         };
 
-        // --- [신규] 리스트 필터 로직 ---
         function populateFilters() {
             const parishSelect = document.getElementById('filterParish');
             const zoneSelect = document.getElementById('filterZone');
             
-            // 기존 옵션 제거 (첫번째 '전체' 제외)
             while (parishSelect.options.length > 1) parishSelect.remove(1);
             while (zoneSelect.options.length > 1) zoneSelect.remove(1);
 
-            // 교구 목록 추출 및 정렬
             const parishes = [...new Set(allData.map(p => p.parish))].sort();
             parishes.forEach(p => {
                 const opt = document.createElement('option');
-                opt.value = p;
-                opt.innerText = p;
-                parishSelect.appendChild(opt);
+                opt.value = p; opt.innerText = p; parishSelect.appendChild(opt);
             });
 
-            // 구역 목록 추출 및 정렬 (숫자 기준 정렬 시도)
             const zones = [...new Set(allData.map(p => p.zone))].sort((a, b) => {
                 const numA = parseInt(a.replace(/[^0-9]/g, '')) || 0;
                 const numB = parseInt(b.replace(/[^0-9]/g, '')) || 0;
@@ -261,9 +330,7 @@
             });
             zones.forEach(z => {
                 const opt = document.createElement('option');
-                opt.value = z;
-                opt.innerText = z;
-                zoneSelect.appendChild(opt);
+                opt.value = z; opt.innerText = z; zoneSelect.appendChild(opt);
             });
         }
 
@@ -282,10 +349,21 @@
             renderPersonList(filtered);
         }
 
-        // --- 기존 로직들 ---
         function exportToExcel() {
             if (allData.length === 0) { alert("저장할 데이터가 없습니다."); return; }
-            const exportData = allData.map(p => ({
+            const pFilter = document.getElementById('filterParish').value;
+            const zFilter = document.getElementById('filterZone').value;
+            
+            // 현재 필터링된 데이터 기준으로 저장
+            let dataToExport = allData;
+            if(pFilter || zFilter) {
+                dataToExport = allData.filter(p => 
+                    (pFilter === "" || p.parish === pFilter) && 
+                    (zFilter === "" || p.zone === zFilter)
+                );
+            }
+
+            const exportData = dataToExport.map(p => ({
                 '이름': p.name, '주소': p.address, '교구': p.parish, '구역': p.zone,
                 '소속': p.group, '직분': p.role, '출석여부': p.attendance
             }));
@@ -330,12 +408,8 @@
             const newAttendance = document.querySelector('input[name="editAttendance"]:checked').value;
             const addressChanged = (person.address !== newAddress);
 
-            person.name = newName;
-            person.role = newRole;
-            person.parish = newParish;
-            person.zone = newZone;
-            person.group = newGroup;
-            person.attendance = newAttendance;
+            person.name = newName; person.role = newRole; person.parish = newParish;
+            person.zone = newZone; person.group = newGroup; person.attendance = newAttendance;
             person.markerText = newZone.replace(/[^0-9]/g, '');
 
             if (addressChanged) {
@@ -378,8 +452,8 @@
 
             closeEditModal();
             updateStatsAndUI();
-            populateFilters(); // 수정 시 필터 옵션 갱신 가능성
-            applyListFilter(); // 현재 필터 상태 유지
+            populateFilters();
+            applyListFilter();
             alert("수정되었습니다.");
         }
 
@@ -498,7 +572,7 @@
             document.getElementById('statusMsg').innerText = "완료";
             document.getElementById('totalCount').innerText = allData.length;
             
-            populateFilters(); // [신규] 필터 옵션 채우기
+            populateFilters();
             updateStatsAndUI();
             
             if (tempValid.length > 0) {
@@ -519,7 +593,7 @@
                 stats[p.parish].zones[p.zone].groups[p.group]++;
             });
             renderStatsTree();
-            applyListFilter(); // 필터 적용해서 렌더링
+            applyListFilter();
             updateSelectionSummary();
         }
 
@@ -614,9 +688,7 @@
             });
         }
 
-        // --- [수정] 리스트 렌더링 (필터 적용) ---
         function renderPersonList(dataToRender) {
-            // 인자가 없으면 전체 데이터 사용
             const list = dataToRender || allData;
             const tbody = document.getElementById('personList');
             tbody.innerHTML = '';
@@ -630,7 +702,7 @@
                 const badgeStyle = `background-color: ${colorHex}1A; color: ${colorHex}; border: 1px solid ${colorHex}40;`;
 
                 tr.innerHTML = `
-                    <td class="px-2 py-2 text-center">
+                    <td class="px-2 py-2 text-center no-print">
                         <input type="checkbox" ${p.checked ? 'checked' : ''} onchange="togglePerson(${p.id}, this.checked)" class="rounded text-blue-600 focus:ring-0">
                     </td>
                     <td class="px-2 py-2 text-center" onclick="highlightPerson(${p.id})">
@@ -643,7 +715,7 @@
                     <td class="px-2 py-2 text-center" onclick="highlightPerson(${p.id})">
                         <span class="px-2 py-0.5 rounded-full text-xs font-bold text-white ${p.attendance === 'O' ? 'bg-green-500' : 'bg-gray-400'}">${p.attendance}</span>
                     </td>
-                    <td class="px-2 py-2 text-center">
+                    <td class="px-2 py-2 text-center no-print">
                         <button onclick="openEditModal(${p.id})" class="text-gray-400 hover:text-blue-600 transition p-1"><i class="fa-solid fa-pen"></i></button>
                     </td>
                 `;
@@ -667,7 +739,6 @@
             if (person.marker) {
                 if (!person.checked) {
                     person.checked = true; updateMarkerVisibility(person); updateSelectionSummary();
-                    // 리스트 내 체크박스도 업데이트 (현재 렌더링된 리스트에 있다면)
                     const cb = document.querySelector(`#row-${id} input`);
                     if(cb) cb.checked = true;
                 }
