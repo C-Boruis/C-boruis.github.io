@@ -23,8 +23,27 @@
         .tree-item { transition: all 0.2s; }
         .tree-header:hover { background-color: #f9fafb; }
         
-        /* 테이블 스타일 */
-        th { white-space: nowrap; }
+        /* 테이블 스타일 및 리사이징 */
+        th { white-space: nowrap; position: relative; }
+        
+        /* 리사이저 핸들 */
+        .resizer {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 4px;
+            cursor: col-resize;
+            user-select: none;
+            height: 100%;
+            background-color: transparent; /* 평소엔 투명 */
+            z-index: 10;
+        }
+        
+        /* 호버하거나 드래그 중일 때 */
+        .resizer:hover, .resizing {
+            background-color: #3b82f6; /* 파란색 가이드 */
+            width: 4px;
+        }
         
         /* 스크롤바 */
         ::-webkit-scrollbar { width: 6px; }
@@ -93,7 +112,7 @@
                 </div>
             </div>
 
-            <!-- 3. 하단: 인원 명단 (컬럼 원복) -->
+            <!-- 3. 하단: 인원 명단 (컬럼 리사이징 + 직분 추가) -->
             <div class="flex-1 flex flex-col overflow-hidden">
                 <div class="p-2 bg-gray-50 border-b text-xs font-bold text-gray-600 flex justify-between items-center">
                     <div class="flex items-center gap-2">
@@ -103,17 +122,28 @@
                     <span id="currentFilterName" class="font-normal text-gray-400">전체 목록</span>
                 </div>
 
-                <div class="flex-1 overflow-y-auto">
-                    <table class="w-full text-sm text-left border-collapse table-fixed">
-                        <thead class="text-xs text-gray-500 uppercase bg-white sticky top-0 z-10 shadow-sm">
+                <div class="flex-1 overflow-y-auto overflow-x-auto">
+                    <table id="resizeTable" class="w-full text-sm text-left border-collapse table-fixed min-w-[400px]">
+                        <thead class="text-xs text-gray-500 uppercase bg-white sticky top-0 z-10 shadow-sm select-none">
                             <tr>
                                 <th class="px-2 py-2 border-b w-8 text-center">
                                     <i class="fa-solid fa-check text-gray-300"></i>
                                 </th>
-                                <th class="px-2 py-2 border-b w-20 text-center">교구/구역</th>
-                                <th class="px-2 py-2 border-b w-24">이름</th>
-                                <th class="px-2 py-2 border-b">주소</th>
-                                <th class="px-2 py-2 border-b w-12 text-center">출석</th>
+                                <th class="px-2 py-2 border-b w-20 text-center">
+                                    교구/구역<div class="resizer"></div>
+                                </th>
+                                <th class="px-2 py-2 border-b w-20">
+                                    이름<div class="resizer"></div>
+                                </th>
+                                <th class="px-2 py-2 border-b w-16">
+                                    직분<div class="resizer"></div>
+                                </th>
+                                <th class="px-2 py-2 border-b">
+                                    주소<div class="resizer"></div>
+                                </th>
+                                <th class="px-2 py-2 border-b w-12 text-center">
+                                    출석<div class="resizer"></div>
+                                </th>
                             </tr>
                         </thead>
                         <tbody id="personList" class="divide-y divide-gray-100">
@@ -144,6 +174,9 @@
 
         // --- 초기화 ---
         window.onload = function() {
+            // 테이블 리사이징 기능 초기화
+            initTableResizer();
+
             if (!window.kakao || !window.kakao.maps) {
                 alert("API 키를 확인해주세요.");
                 return;
@@ -155,6 +188,43 @@
                 geocoder = new kakao.maps.services.Geocoder();
             });
         };
+
+        // --- [신규] 테이블 컬럼 리사이징 로직 ---
+        function initTableResizer() {
+            const table = document.getElementById('resizeTable');
+            const cols = table.querySelectorAll('th');
+            
+            cols.forEach((col) => {
+                const resizer = col.querySelector('.resizer');
+                if (!resizer) return;
+
+                let x = 0;
+                let w = 0;
+
+                const mouseDownHandler = function(e) {
+                    x = e.clientX;
+                    const styles = window.getComputedStyle(col);
+                    w = parseInt(styles.width, 10);
+
+                    document.addEventListener('mousemove', mouseMoveHandler);
+                    document.addEventListener('mouseup', mouseUpHandler);
+                    resizer.classList.add('resizing');
+                };
+
+                const mouseMoveHandler = function(e) {
+                    const dx = e.clientX - x;
+                    col.style.width = `${w + dx}px`;
+                };
+
+                const mouseUpHandler = function() {
+                    document.removeEventListener('mousemove', mouseMoveHandler);
+                    document.removeEventListener('mouseup', mouseUpHandler);
+                    resizer.classList.remove('resizing');
+                };
+
+                resizer.addEventListener('mousedown', mouseDownHandler);
+            });
+        }
 
         // --- 양식 다운로드 ---
         function downloadSample() {
@@ -412,7 +482,7 @@
             });
         }
 
-        // --- [수정] 테이블 렌더링 (컬럼 원복) ---
+        // --- [수정] 테이블 렌더링 (직분 컬럼 추가) ---
         function renderPersonList() {
             const tbody = document.getElementById('personList');
             tbody.innerHTML = '';
@@ -437,7 +507,10 @@
                         <div class="text-[10px] text-gray-500 mt-1">${p.group}</div>
                     </td>
                     <td class="px-2 py-2 font-medium text-gray-800 text-sm truncate" onclick="highlightPerson(${p.id})">
-                        ${p.name} <span class="text-xs text-gray-400">(${p.role})</span>
+                        ${p.name}
+                    </td>
+                    <td class="px-2 py-2 text-center text-xs text-gray-600 truncate" onclick="highlightPerson(${p.id})">
+                        ${p.role}
                     </td>
                     <td class="px-2 py-2 text-xs text-gray-500 truncate" title="${p.address}" onclick="highlightPerson(${p.id})">
                         ${p.address || '<span class="text-red-400">주소 없음</span>'}
