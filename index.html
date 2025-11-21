@@ -1,9 +1,10 @@
+/* 1d9268593ca620c81ee6929f1f2de6a3 */
 <!DOCTYPE html>
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>주소 시각화 및 구역 관리 시스템</title>
+    <title>주소 시각화 및 구역 관리 시스템2</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -137,18 +138,19 @@
         </div>
     </main>
 
+    <!-- 카카오 지도 SDK -->
     <script type="text/javascript" src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=1d9268593ca620c81ee6929f1f2de6a3&libraries=services,drawing"></script>
 
     <script>
         // --- 설정 및 전역 변수 ---
-        const MARKER_NORMAL = "https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/markerStar.png"; // 파란색(기본)
-        const MARKER_SELECTED = "https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/marker_red.png"; // 빨간색(선택됨)
+        const MARKER_NORMAL = "https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/markerStar.png";
+        const MARKER_SELECTED = "https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/marker_red.png";
 
         let map, geocoder, drawingManager;
-        let allData = []; // 전체 데이터 저장
-        let zones = [];   // 생성된 구역(Polygon) 정보 저장
-        let zoneCounter = 1; // 구역 번호 부여용
-        let selectedMarker = null; // 현재 선택된 마커
+        let allData = [];
+        let zones = [];   
+        let zoneCounter = 1; 
+        let selectedMarker = null;
 
         // --- 1. 초기화 ---
         window.onload = function() {
@@ -164,6 +166,7 @@
                 
                 geocoder = new kakao.maps.services.Geocoder();
 
+                // DrawingManager 생성
                 drawingManager = new kakao.maps.drawing.DrawingManager({
                     map: map,
                     drawingMode: [kakao.maps.drawing.OverlayType.POLYGON],
@@ -177,14 +180,13 @@
                     }
                 });
 
-                // 구역 그리기 완료 이벤트 등록
+                // 이벤트 등록 (그리기 완료 시)
                 drawingManager.addListener('drawend', onDrawEnd);
             });
         };
 
-        // --- 2. 랜덤 색상 생성 함수 (가시성 높은 색상 위주) ---
+        // --- 2. 랜덤 색상 생성 ---
         function getRandomColor() {
-            // 채도(S)와 명도(L)를 고정하여 너무 어둡거나 밝지 않은 선명한 색상 생성
             const hue = Math.floor(Math.random() * 360);
             return `hsl(${hue}, 70%, 50%)`;
         }
@@ -220,7 +222,6 @@
 
             document.getElementById('statusMsg').innerText = `데이터 ${data.length}건 처리 중...`;
             
-            // 기존 데이터 초기화
             if(allData.length > 0) allData.forEach(d => d.marker.setMap(null));
             allData = [];
             
@@ -300,7 +301,7 @@
             }
         }
 
-        // --- 5. 구역(Polygon) 그리기 및 목록 관리 ---
+        // --- 5. 구역 그리기 및 목록 관리 (수정됨) ---
         function selectOverlay(type) {
             if(!drawingManager) return;
             drawingManager.cancel();
@@ -309,42 +310,48 @@
         }
 
         function onDrawEnd(data) {
-            document.getElementById('drawGuide').classList.add('hidden');
-            
-            const polygon = data.target;
-            
-            // [수정] 랜덤 색상 적용
-            const color = getRandomColor();
-            
-            // 폴리곤 스타일 적용
-            polygon.setOptions({
-                fillColor: color,
-                strokeColor: color
-            });
+            try {
+                console.log('구역 그리기 완료됨');
+                document.getElementById('drawGuide').classList.add('hidden');
+                
+                const polygon = data.target;
+                const color = getRandomColor();
+                
+                // 스타일 적용
+                polygon.setOptions({
+                    fillColor: color,
+                    strokeColor: color
+                });
 
-            // 구역 내 인원 계산
-            const path = polygon.getPath();
-            const insidePeople = allData.filter(p => isInsidePolygon({x: p.lng, y: p.lat}, path));
+                // 인원 계산
+                const path = polygon.getPath();
+                const insidePeople = allData.filter(p => isInsidePolygon({x: p.lng, y: p.lat}, path));
 
-            // 구역 데이터 생성
-            const zoneId = zoneCounter++;
-            const zoneName = `구역 ${zoneId}`;
-            
-            const zoneData = {
-                id: zoneId,
-                name: zoneName,
-                polygon: polygon,
-                people: insidePeople,
-                color: color
-            };
-            zones.push(zoneData);
+                // 데이터 생성
+                const zoneId = zoneCounter++;
+                const zoneName = `구역 ${zoneId}`;
+                
+                const zoneData = {
+                    id: zoneId,
+                    name: zoneName,
+                    polygon: polygon,
+                    people: insidePeople,
+                    color: color
+                };
+                zones.push(zoneData);
 
-            // 목록 갱신 및 필터링
-            renderZoneList();
-            filterByZone(zoneId);
+                // UI 업데이트
+                renderZoneList();
+                
+                // 약간의 지연을 두어 UI 렌더링 후 필터 적용 (안전장치)
+                setTimeout(() => filterByZone(zoneId), 50);
+                
+            } catch (err) {
+                console.error("구역 생성 중 오류:", err);
+                alert("구역 생성 중 문제가 발생했습니다. 콘솔을 확인하세요.");
+            }
         }
 
-        // 구역 목록 렌더링 (랜덤 색상 적용)
         function renderZoneList() {
             const container = document.getElementById('zoneListContainer');
             
@@ -357,9 +364,8 @@
             zones.forEach(zone => {
                 const div = document.createElement('div');
                 div.className = `zone-item flex justify-between items-center p-2 bg-white border rounded shadow-sm cursor-pointer mb-2`;
-                
-                // [수정] 랜덤 색상을 왼쪽 테두리에 적용하여 구분
                 div.style.borderLeftColor = zone.color;
+                div.dataset.id = zone.id; // [중요] ID로 식별하기 위해 속성 추가
                 
                 div.onclick = () => filterByZone(zone.id);
                 
@@ -382,23 +388,16 @@
             const zone = zones.find(z => z.id === zoneId);
             if (!zone) return;
 
-            // 선택된 구역 UI 강조
+            // 모든 선택 효과 제거
             document.querySelectorAll('.zone-item').forEach(el => el.classList.remove('zone-selected'));
             
-            // 현재 선택된 구역 찾아서 스타일 적용
-            const items = document.getElementById('zoneListContainer').children;
-            // 목록을 순회하며 클릭된 zoneId와 매칭되는지 확인 (인덱스나 이름으로 찾기보다 id로 찾는게 안전하지만, 여기선 순서대로 렌더링됨을 이용)
-            // 더 정확히는 렌더링 시 data-id 속성을 주면 좋지만, 간단히 구현:
-            for (let item of items) {
-                if (item.innerHTML.includes(zone.name)) {
-                    item.classList.add('zone-selected');
-                    break;
-                }
-            }
+            // [수정] ID 기반으로 정확한 요소 찾기
+            const item = document.querySelector(`.zone-item[data-id="${zoneId}"]`);
+            if(item) item.classList.add('zone-selected');
 
             const titleEl = document.getElementById('currentFilterName');
             titleEl.innerText = `${zone.name} (선택됨)`;
-            titleEl.style.color = zone.color; // 제목 색상도 구역 색상으로 변경
+            titleEl.style.color = zone.color;
             titleEl.style.fontWeight = 'bold';
             
             renderTable(zone.people);
