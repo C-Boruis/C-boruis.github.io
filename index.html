@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>주소 시각화 및 구역 관리 시스템2</title>
+    <title>주소 시각화 및 구역 관리 시스템</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -23,7 +23,7 @@
         .selected-row { background-color: #eff6ff !important; border-left: 4px solid #2563eb; }
         
         /* 구역 아이템 스타일 */
-        .zone-item { transition: all 0.2s; border-left-width: 6px; } /* 색상 띠 강조 */
+        .zone-item { transition: all 0.2s; border-left-width: 6px; } 
         .zone-item:hover { transform: translateX(2px); background-color: #f8fafc; }
         .zone-selected { background-color: #eff6ff; box-shadow: inset 0 0 0 1px #bfdbfe; }
 
@@ -42,9 +42,8 @@
                 <i class="fa-solid fa-map-location-dot text-blue-600 text-2xl mr-3"></i>
                 <span>구역 관리 시스템</span>
             </h1>
-            
             <div class="h-8 w-px bg-gray-300"></div>
-
+            
             <!-- 파일 업로드 -->
             <div class="flex items-center gap-3">
                 <div class="relative">
@@ -53,7 +52,7 @@
                         <i class="fa-solid fa-file-excel mr-2"></i>엑셀 업로드
                     </label>
                 </div>
-                <span id="statusMsg" class="text-sm text-gray-500">데이터를 업로드해주세요</span>
+                <span id="statusMsg" class="text-sm text-gray-500">준비 완료</span>
             </div>
         </div>
 
@@ -72,34 +71,30 @@
 
     <!-- 2. 메인 컨텐츠 -->
     <main class="flex flex-1 overflow-hidden">
-        
-        <!-- 좌측: 지도 (70%) -->
+        <!-- 좌측: 지도 -->
         <div id="map-container" class="w-[70%] h-full relative bg-gray-200">
             <div id="map"></div>
-            
-            <!-- 안내 메시지 -->
             <div id="drawGuide" class="absolute top-6 left-1/2 transform -translate-x-1/2 bg-gray-800/90 text-white px-5 py-2.5 rounded-full shadow-xl text-sm font-medium z-50 hidden backdrop-blur-sm flex items-center gap-2 animate-bounce">
                 <i class="fa-solid fa-pen-nib"></i>
                 <span>지도에 점을 찍어 구역을 만드세요 (우클릭: 완료)</span>
             </div>
         </div>
 
-        <!-- 우측: 패널 (30%) -->
+        <!-- 우측: 패널 -->
         <div class="w-[30%] flex flex-col bg-white h-full shadow-xl z-30 border-l border-gray-200">
-            
-            <!-- A. 통계 카드 -->
+            <!-- 통계 카드 -->
             <div class="p-5 border-b bg-gray-50/50">
                 <div class="flex justify-between items-center mb-3">
                     <h2 class="text-sm font-bold text-gray-600 uppercase tracking-wider">현황판</h2>
                     <span class="text-xs text-gray-400 bg-white border px-2 py-1 rounded">Total: <span id="totalCount" class="text-gray-800 font-bold">0</span>명</span>
                 </div>
                 
-                <!-- 구역 목록 (스크롤) -->
                 <div class="mb-2">
                     <div class="text-xs text-gray-500 mb-2 flex justify-between items-center">
                         <span>생성된 구역 목록</span>
                         <button onclick="viewAllData()" class="text-blue-600 hover:underline cursor-pointer text-xs font-medium">전체 보기</button>
                     </div>
+                    <!-- 구역 목록 컨테이너 -->
                     <div id="zoneListContainer" class="space-y-2 max-h-[180px] overflow-y-auto pr-1">
                         <div class="text-center py-4 text-gray-400 text-xs bg-gray-50 rounded border border-dashed">
                             생성된 구역이 없습니다.<br>지도의 '구역 그리기'를 이용하세요.
@@ -108,7 +103,7 @@
                 </div>
             </div>
 
-            <!-- B. 인원 리스트 -->
+            <!-- 인원 리스트 -->
             <div class="flex items-center justify-between px-4 py-2 bg-gray-100 border-b border-t border-gray-200 text-xs font-medium text-gray-600 sticky top-0">
                 <span>인원 명단 (<span id="currentViewCount">0</span>명)</span>
                 <span id="currentFilterName" class="text-blue-600">전체 보기</span>
@@ -137,7 +132,7 @@
         </div>
     </main>
 
-    <!-- 카카오 지도 SDK -->
+    <!-- 카카오 API (키 변경 필수) -->
     <script type="text/javascript" src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=1d9268593ca620c81ee6929f1f2de6a3&libraries=services,drawing"></script>
 
     <script>
@@ -151,10 +146,10 @@
         let zoneCounter = 1; 
         let selectedMarker = null;
 
-        // --- 1. 초기화 ---
+        // --- 1. 초기화 (안전장치 강화) ---
         window.onload = function() {
             if (!window.kakao || !window.kakao.maps) {
-                alert("API 키 오류: 코드를 열어 YOUR_KAKAO_API_KEY를 확인해주세요.");
+                alert("API 로드 실패: YOUR_KAKAO_API_KEY를 확인하거나 인터넷 연결을 확인하세요.");
                 return;
             }
 
@@ -166,31 +161,86 @@
                 geocoder = new kakao.maps.services.Geocoder();
 
                 // DrawingManager 생성
-                drawingManager = new kakao.maps.drawing.DrawingManager({
-                    map: map,
-                    drawingMode: [kakao.maps.drawing.OverlayType.POLYGON],
-                    guideTooltip: ['draw', 'drag', 'edit'],
-                    polygonOptions: {
-                        draggable: false,
-                        removable: false,
-                        strokeWeight: 2,
-                        strokeOpacity: 0.8,
-                        fillOpacity: 0.3
-                    }
-                });
-
-                // 이벤트 등록 (그리기 완료 시)
-                drawingManager.addListener('drawend', onDrawEnd);
+                try {
+                    drawingManager = new kakao.maps.drawing.DrawingManager({
+                        map: map,
+                        drawingMode: [kakao.maps.drawing.OverlayType.POLYGON],
+                        guideTooltip: ['draw', 'drag', 'edit'],
+                        polygonOptions: {
+                            draggable: false,
+                            removable: false,
+                            strokeWeight: 2,
+                            strokeOpacity: 0.8,
+                            fillOpacity: 0.3
+                        }
+                    });
+                    
+                    // 이벤트 리스너: 여기서 onDrawEnd를 직접 정의하지 않고 함수로 연결
+                    drawingManager.addListener('drawend', handleDrawEnd);
+                    
+                } catch (e) {
+                    console.error("DrawingManager 초기화 실패:", e);
+                    alert("그리기 도구 초기화 중 오류가 발생했습니다.");
+                }
             });
         };
 
-        // --- 2. 랜덤 색상 생성 ---
-        function getRandomColor() {
-            const hue = Math.floor(Math.random() * 360);
-            return `hsl(${hue}, 70%, 50%)`;
+        // --- 2. 그리기 완료 핸들러 (핵심 수정) ---
+        function handleDrawEnd(data) {
+            try {
+                console.log("이벤트 발생: drawend");
+                document.getElementById('drawGuide').classList.add('hidden');
+                
+                // 1. 폴리곤 객체 확보
+                const polygon = data.target;
+                if (!polygon) {
+                    alert("오류: 그려진 구역 정보를 가져오지 못했습니다.");
+                    return;
+                }
+
+                // 2. 스타일 적용 (랜덤 색상)
+                const color = getRandomColor();
+                polygon.setOptions({
+                    fillColor: color,
+                    strokeColor: color
+                });
+
+                // 3. 구역 내 인원 계산 (데이터가 없어도 구역은 생성됨)
+                let insidePeople = [];
+                if (allData.length > 0) {
+                    const path = polygon.getPath();
+                    insidePeople = allData.filter(p => isInsidePolygon({x: p.lng, y: p.lat}, path));
+                }
+
+                // 4. 데이터 저장
+                const zoneId = zoneCounter++;
+                const zoneName = `구역 ${zoneId}`;
+                
+                const zoneData = {
+                    id: zoneId,
+                    name: zoneName,
+                    polygon: polygon,
+                    people: insidePeople,
+                    color: color
+                };
+                zones.push(zoneData);
+
+                // 5. UI 업데이트 (강제 리렌더링)
+                renderZoneList();
+                
+                // 6. 해당 구역 자동 선택
+                setTimeout(() => filterByZone(zoneId), 100);
+
+                // 디버깅용 알림 (성공 시 주석 처리해도 됨)
+                // alert(`구역 생성 완료! 포함된 인원: ${insidePeople.length}명`);
+
+            } catch (err) {
+                console.error("구역 처리 중 에러:", err);
+                alert("구역을 생성하는 도중 에러가 발생했습니다: " + err.message);
+            }
         }
 
-        // --- 3. 엑셀 데이터 처리 ---
+        // --- 3. 엑셀 파일 처리 ---
         function handleFileUpload(event) {
             const file = event.target.files[0];
             if (!file) return;
@@ -210,16 +260,16 @@
                 }
             };
             reader.readAsArrayBuffer(file);
-            event.target.value = ''; // 재업로드 허용
+            event.target.value = '';
         }
 
         async function processData(data) {
             if (!geocoder || !map) {
-                alert("지도가 로드되지 않았습니다. 잠시 후 다시 시도해주세요.");
+                alert("지도가 로드되지 않았습니다.");
                 return;
             }
 
-            document.getElementById('statusMsg').innerText = `데이터 ${data.length}건 처리 중...`;
+            document.getElementById('statusMsg').innerText = `데이터 처리 중...`;
             
             if(allData.length > 0) allData.forEach(d => d.marker.setMap(null));
             allData = [];
@@ -229,21 +279,20 @@
             const normalMarkerImage = new kakao.maps.MarkerImage(MARKER_NORMAL, normalImageSize);
 
             for (const [idx, row] of data.entries()) {
-                const name = row['이름'] || row['Name'] || '미상';
                 const address = row['주소'] || row['Address'] || '';
-                
                 if (!address) continue;
+
+                const name = row['이름'] || row['Name'] || '미상';
 
                 await new Promise(resolve => {
                     geocoder.addressSearch(address, (result, status) => {
                         if (status === kakao.maps.services.Status.OK) {
                             const lat = parseFloat(result[0].y);
                             const lng = parseFloat(result[0].x);
-                            const latLng = new kakao.maps.LatLng(lat, lng);
-
+                            
                             const marker = new kakao.maps.Marker({
                                 map: map,
-                                position: latLng,
+                                position: new kakao.maps.LatLng(lat, lng),
                                 title: name,
                                 image: normalMarkerImage
                             });
@@ -263,7 +312,7 @@
                     });
                 });
                 
-                if (idx % 5 === 0) document.getElementById('statusMsg').innerText = `${idx + 1}/${data.length}건 변환...`;
+                if (idx % 10 === 0) document.getElementById('statusMsg').innerText = `${idx}/${data.length} 처리 중...`;
             }
 
             document.getElementById('statusMsg').innerText = `완료 (${processed}건)`;
@@ -278,82 +327,26 @@
             }
         }
 
-        // --- 4. 마커 강조 ---
-        function highlightPerson(person) {
-            if (selectedMarker) {
-                selectedMarker.setImage(new kakao.maps.MarkerImage(MARKER_NORMAL, new kakao.maps.Size(24, 35)));
-                selectedMarker.setZIndex(0);
-            }
-
-            const selectedImg = new kakao.maps.MarkerImage(MARKER_SELECTED, new kakao.maps.Size(29, 42));
-            person.marker.setImage(selectedImg);
-            person.marker.setZIndex(999);
-            
-            selectedMarker = person.marker;
-            map.panTo(person.marker.getPosition());
-
-            document.querySelectorAll('.list-row').forEach(r => r.classList.remove('selected-row'));
-            const targetRow = document.getElementById(`row-${person.id}`);
-            if (targetRow) {
-                targetRow.classList.add('selected-row');
-                targetRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }
-        }
-
-        // --- 5. 구역 그리기 및 목록 관리 (수정됨) ---
+        // --- 4. UI 및 유틸리티 함수 ---
         function selectOverlay(type) {
-            if(!drawingManager) return;
+            if(!drawingManager) {
+                alert("지도 도구가 초기화되지 않았습니다.");
+                return;
+            }
             drawingManager.cancel();
             drawingManager.select(kakao.maps.drawing.OverlayType[type]);
             document.getElementById('drawGuide').classList.remove('hidden');
         }
 
-        function onDrawEnd(data) {
-            try {
-                console.log('구역 그리기 완료됨');
-                document.getElementById('drawGuide').classList.add('hidden');
-                
-                const polygon = data.target;
-                const color = getRandomColor();
-                
-                // 스타일 적용
-                polygon.setOptions({
-                    fillColor: color,
-                    strokeColor: color
-                });
-
-                // 인원 계산
-                const path = polygon.getPath();
-                const insidePeople = allData.filter(p => isInsidePolygon({x: p.lng, y: p.lat}, path));
-
-                // 데이터 생성
-                const zoneId = zoneCounter++;
-                const zoneName = `구역 ${zoneId}`;
-                
-                const zoneData = {
-                    id: zoneId,
-                    name: zoneName,
-                    polygon: polygon,
-                    people: insidePeople,
-                    color: color
-                };
-                zones.push(zoneData);
-
-                // UI 업데이트
-                renderZoneList();
-                
-                // 약간의 지연을 두어 UI 렌더링 후 필터 적용 (안전장치)
-                setTimeout(() => filterByZone(zoneId), 50);
-                
-            } catch (err) {
-                console.error("구역 생성 중 오류:", err);
-                alert("구역 생성 중 문제가 발생했습니다. 콘솔을 확인하세요.");
-            }
+        function getRandomColor() {
+            const hue = Math.floor(Math.random() * 360);
+            return `hsl(${hue}, 70%, 50%)`;
         }
 
         function renderZoneList() {
             const container = document.getElementById('zoneListContainer');
-            
+            if (!container) return;
+
             if (zones.length === 0) {
                 container.innerHTML = `<div class="text-center py-4 text-gray-400 text-xs bg-gray-50 rounded border border-dashed">생성된 구역이 없습니다.</div>`;
                 return;
@@ -364,7 +357,7 @@
                 const div = document.createElement('div');
                 div.className = `zone-item flex justify-between items-center p-2 bg-white border rounded shadow-sm cursor-pointer mb-2`;
                 div.style.borderLeftColor = zone.color;
-                div.dataset.id = zone.id; // [중요] ID로 식별하기 위해 속성 추가
+                div.setAttribute('data-id', zone.id); // 표준 속성 사용
                 
                 div.onclick = () => filterByZone(zone.id);
                 
@@ -387,15 +380,15 @@
             const zone = zones.find(z => z.id === zoneId);
             if (!zone) return;
 
-            // 모든 선택 효과 제거
+            // 스타일 초기화
             document.querySelectorAll('.zone-item').forEach(el => el.classList.remove('zone-selected'));
             
-            // [수정] ID 기반으로 정확한 요소 찾기
-            const item = document.querySelector(`.zone-item[data-id="${zoneId}"]`);
+            // 선택된 아이템 강조
+            const item = document.querySelector(`.zone-item[data-id='${zoneId}']`);
             if(item) item.classList.add('zone-selected');
 
             const titleEl = document.getElementById('currentFilterName');
-            titleEl.innerText = `${zone.name} (선택됨)`;
+            titleEl.innerText = `${zone.name}`;
             titleEl.style.color = zone.color;
             titleEl.style.fontWeight = 'bold';
             
@@ -417,17 +410,14 @@
 
         function viewAllData() {
             document.querySelectorAll('.zone-item').forEach(el => el.classList.remove('zone-selected'));
-            
             const titleEl = document.getElementById('currentFilterName');
             titleEl.innerText = "전체 보기";
             titleEl.style.color = "#2563eb";
-            titleEl.style.fontWeight = 'normal';
-
             renderTable(allData);
         }
 
         function resetAll() {
-            if(!confirm("모든 데이터를 초기화하시겠습니까?")) return;
+            if(!confirm("초기화 하시겠습니까?")) return;
             zones.forEach(z => z.polygon.setMap(null));
             zones = [];
             allData.forEach(d => d.marker.setMap(null));
@@ -439,13 +429,32 @@
             document.getElementById('totalCount').innerText = "0";
         }
 
+        function highlightPerson(person) {
+            if (selectedMarker) {
+                selectedMarker.setImage(new kakao.maps.MarkerImage(MARKER_NORMAL, new kakao.maps.Size(24, 35)));
+                selectedMarker.setZIndex(0);
+            }
+            const selectedImg = new kakao.maps.MarkerImage(MARKER_SELECTED, new kakao.maps.Size(29, 42));
+            person.marker.setImage(selectedImg);
+            person.marker.setZIndex(999);
+            selectedMarker = person.marker;
+            map.panTo(person.marker.getPosition());
+
+            document.querySelectorAll('.list-row').forEach(r => r.classList.remove('selected-row'));
+            const targetRow = document.getElementById(`row-${person.id}`);
+            if (targetRow) {
+                targetRow.classList.add('selected-row');
+                targetRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+
         function renderTable(data) {
             document.getElementById('currentViewCount').innerText = data.length;
             const tbody = document.getElementById('personList');
             tbody.innerHTML = '';
 
             if (data.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="4" class="text-center py-10 text-gray-400">표시할 데이터가 없습니다.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="4" class="text-center py-10 text-gray-400">데이터가 없습니다.</td></tr>`;
                 return;
             }
 
@@ -482,4 +491,3 @@
     </script>
 </body>
 </html>
-
