@@ -41,6 +41,11 @@
             </h1>
             <div class="h-6 w-px bg-gray-300 mx-2"></div>
             <div class="flex items-center gap-2">
+                <!-- [신규] 양식 다운로드 버튼 -->
+                <button onclick="downloadSample()" class="bg-gray-500 hover:bg-gray-600 text-white px-3 py-1.5 rounded text-sm cursor-pointer flex items-center shadow-sm transition">
+                    <i class="fa-solid fa-download mr-2"></i>양식 다운로드
+                </button>
+
                 <input type="file" id="excelFile" accept=".xlsx, .xls" class="hidden" onchange="handleFileUpload(event)">
                 <label for="excelFile" class="bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded text-sm cursor-pointer flex items-center shadow-sm transition">
                     <i class="fa-solid fa-file-excel mr-2"></i>엑셀 업로드
@@ -74,7 +79,7 @@
                 </div>
             </div>
 
-            <!-- 2. 중단: 선택된 현황 요약 (새로 추가된 기능) -->
+            <!-- 2. 중단: 선택된 현황 요약 -->
             <div class="bg-blue-50 border-b border-blue-100 p-3 shrink-0 transition-all" id="selectionSummaryPanel">
                 <div class="flex justify-between items-center mb-1">
                     <span class="text-xs font-bold text-blue-800"><i class="fa-solid fa-check-double mr-1"></i>현재 체크된 인원 현황</span>
@@ -121,11 +126,10 @@
     <script>
         // --- 전역 변수 ---
         let map, geocoder;
-        let allData = []; // { id, name, address, parish, zone, group, role, attendance, lat, lng, marker, checked }
-        let stats = {};   // 계층적 통계 데이터
+        let allData = []; 
+        let stats = {};   
         let selectedMarker = null;
 
-        // 교구별 색상
         const PARISH_COLORS = {
             '1교구': { hex: '#2563EB', label: 'bg-blue-500' },
             '2교구': { hex: '#DC2626', label: 'bg-red-500' },
@@ -148,6 +152,28 @@
             });
         };
 
+        // --- [신규] 샘플 양식 다운로드 함수 ---
+        function downloadSample() {
+            const sampleData = [
+                { '이름': '홍길동', '주소': '서울특별시 중구 세종대로 110', '교구': '1교구', '구역': '1구역', '소속': '봉사회', '직분': '팀장', '출석여부': 'O' },
+                { '이름': '김철수', '주소': '서울특별시 종로구 종로 1', '교구': '1교구', '구역': '2구역', '소속': '청년회', '직분': '팀원', '출석여부': 'X' },
+                { '이름': '이영희', '주소': '서울특별시 강남구 테헤란로 152', '교구': '2교구', '구역': '1구역', '소속': '어머니회', '직분': '팀원', '출석여부': 'O' },
+                { '이름': '박민수', '주소': '서울특별시 서초구 강남대로 465', '교구': '2교구', '구역': '3구역', '소속': '은빛장년회', '직분': '회계', '출석여부': 'O' },
+                { '이름': '정수진', '주소': '', '교구': '3교구', '구역': '1구역', '소속': '일반', '직분': '팀원', '출석여부': 'X' }
+            ];
+            
+            const ws = XLSX.utils.json_to_sheet(sampleData);
+            // 컬럼 너비 자동 조절 (대략적으로)
+            const wscols = [
+                {wch: 10}, {wch: 40}, {wch: 10}, {wch: 10}, {wch: 15}, {wch: 10}, {wch: 10}
+            ];
+            ws['!cols'] = wscols;
+
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "샘플데이터");
+            XLSX.writeFile(wb, "구역관리_샘플양식.xlsx");
+        }
+
         // --- 데이터 처리 ---
         function handleFileUpload(event) {
             const file = event.target.files[0];
@@ -169,7 +195,6 @@
             if (!geocoder) return;
             document.getElementById('statusMsg').innerText = "처리 중...";
             
-            // 기존 마커 제거
             allData.forEach(d => { if(d.marker) d.marker.setMap(null); });
             allData = [];
             
@@ -179,17 +204,16 @@
                 const name = row['이름'] || '미상';
                 const parish = row['교구'] || '미지정';
                 const zone = row['구역'] || '미지정';
-                const group = row['소속'] || '기타'; // [신규] 소속
+                const group = row['소속'] || '기타';
                 const address = row['주소'] || '';
                 
-                // 기본 데이터 객체
                 const person = {
                     id: idx, name, address, parish, zone, group,
                     role: row['직분'] || '-',
                     attendance: row['출석여부'] || 'X',
                     marker: null,
-                    markerText: zone.replace(/[^0-9]/g, ''), // 숫자만 추출
-                    checked: true // 기본 체크 상태
+                    markerText: zone.replace(/[^0-9]/g, ''),
+                    checked: true
                 };
 
                 if (address) {
@@ -230,10 +254,8 @@
             document.getElementById('statusMsg').innerText = "완료";
             document.getElementById('totalCount').innerText = allData.length;
 
-            // 통계 계산 및 UI 렌더링
             updateStatsAndUI();
             
-            // 지도 범위 조정
             if (tempValid.length > 0) {
                 const bounds = new kakao.maps.LatLngBounds();
                 tempValid.forEach(d => bounds.extend(d.marker.getPosition()));
@@ -241,9 +263,7 @@
             }
         }
 
-        // --- 핵심 로직: 통계 계산 및 트리 렌더링 ---
         function updateStatsAndUI() {
-            // 1. 통계 집계 (전체 데이터 기준)
             stats = {};
             allData.forEach(p => {
                 if (!stats[p.parish]) stats[p.parish] = { total: 0, zones: {} };
@@ -256,7 +276,6 @@
                 stats[p.parish].zones[p.zone].groups[p.group]++;
             });
 
-            // 2. UI 렌더링
             renderStatsTree();
             renderPersonList();
             updateSelectionSummary();
@@ -270,11 +289,9 @@
                 const pData = stats[parish];
                 const colorClass = (PARISH_COLORS[parish] || PARISH_COLORS['default']).label;
                 
-                // 교구 블록
                 const parishDiv = document.createElement('div');
                 parishDiv.className = "border rounded bg-white overflow-hidden shadow-sm text-sm";
                 
-                // 교구 헤더
                 parishDiv.innerHTML = `
                     <div class="flex items-center justify-between p-2 bg-gray-50 border-b cursor-pointer hover:bg-gray-100">
                         <div class="flex items-center gap-2">
@@ -286,14 +303,11 @@
                     </div>
                 `;
 
-                // 구역 리스트
                 const zonesDiv = document.createElement('div');
                 zonesDiv.className = "divide-y divide-gray-100";
 
                 Object.keys(pData.zones).sort().forEach(zone => {
                     const zData = pData.zones[zone];
-                    
-                    // 소속별 뱃지 생성
                     let groupsHtml = '';
                     Object.keys(zData.groups).sort().forEach(group => {
                         groupsHtml += `
@@ -323,9 +337,7 @@
             });
         }
 
-        // --- 체크박스 로직 & 지도 제어 ---
         function toggleGroup(level, key, isChecked) {
-            // 데이터 상태 업데이트
             allData.forEach(p => {
                 let match = false;
                 if (level === 'parish' && p.parish === key) match = true;
@@ -343,10 +355,8 @@
                     updateMarkerVisibility(p);
                 }
             });
-            
-            // UI 갱신
-            renderPersonList(); // 리스트 체크박스 동기화
-            updateSelectionSummary(); // 요약바 갱신
+            renderPersonList();
+            updateSelectionSummary();
         }
 
         function togglePerson(id, isChecked) {
@@ -363,10 +373,8 @@
                 p.checked = isChecked;
                 updateMarkerVisibility(p);
             });
-            // 통계 트리의 모든 체크박스 상태 변경 (단순화: 실제 DOM 조작 대신 데이터 기반 리렌더링이 나음, 여기선 데이터만)
             const checkboxes = document.querySelectorAll('input[type="checkbox"]');
             checkboxes.forEach(cb => cb.checked = isChecked);
-            
             renderPersonList();
             updateSelectionSummary();
         }
@@ -377,7 +385,6 @@
             }
         }
 
-        // --- 선택 현황 요약바 업데이트 ---
         function updateSelectionSummary() {
             const checkedData = allData.filter(p => p.checked);
             document.getElementById('selectedCount').innerText = checkedData.length;
@@ -390,7 +397,6 @@
                 return;
             }
 
-            // 요약 집계 (소속별 카운트)
             const summary = {};
             checkedData.forEach(p => {
                 if (!summary[p.group]) summary[p.group] = 0;
@@ -405,13 +411,9 @@
             });
         }
 
-        // --- 리스트 렌더링 ---
         function renderPersonList() {
             const tbody = document.getElementById('personList');
             tbody.innerHTML = '';
-
-            // 성능을 위해 상위 200개만 렌더링하거나 페이지네이션 필요하지만 여기선 전체
-            // 전체 렌더링 시 속도 저하 방지를 위해 DocumentFragment 사용
             const fragment = document.createDocumentFragment();
 
             allData.forEach(p => {
@@ -439,7 +441,6 @@
             tbody.appendChild(fragment);
         }
 
-        // --- 유틸리티 ---
         function createSvgMarker(color, text) {
             const svg = `
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="35" height="45">
@@ -454,7 +455,6 @@
             const person = allData.find(p => p.id === id);
             if (!person) return;
             
-            // 선택 리셋
             if(selectedMarker) {
                 const prev = allData.find(p => p.marker === selectedMarker);
                 if(prev) {
@@ -463,10 +463,9 @@
                 }
             }
 
-            // 하이라이트 적용
             if (person.marker) {
                 if (!person.checked) {
-                    alert("체크 해제된 인원입니다. 지도에서 보려면 체크해주세요.");
+                    alert("체크 해제된 인원입니다.");
                     person.checked = true;
                     updateMarkerVisibility(person);
                     updateSelectionSummary();
@@ -481,7 +480,6 @@
                 alert("위치 정보가 없는 인원입니다.");
             }
 
-            // 리스트 스크롤
             document.querySelectorAll('.selected-row').forEach(el => el.classList.remove('selected-row'));
             const row = document.getElementById(`row-${id}`);
             if(row) {
@@ -503,4 +501,3 @@
     </script>
 </body>
 </html>
-
