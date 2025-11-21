@@ -49,64 +49,63 @@
             const _0x5a1 = {
                 _i: "1bbd8287523c095541291501f2385982980510979070225456d1460716303626",
                 _p: "60b91f6793063f562951a52603e0033826435427775204309662023077008500",
-                _u: "em9uZV9tYW5hZ2VyLmh0bWw="
+                _u: "em9uZV9tYW5hZ2VyLmh0bWw=" // zone_manager.html
             };
 
-            async function _0x_h(_0x_v) {
-                const _0x_e = new TextEncoder().encode(_0x_v);
-                const _0x_b = await crypto.subtle.digest('SHA-256', _0x_e);
-                const _0x_a = Array.from(new Uint8Array(_0x_b));
-                return _0x_a.map(b => b.toString(16).padStart(2, '0')).join('');
-            }
+            // 2. 순수 JS SHA-256 구현 (환경 독립적)
+            var sha256=function a(b){function c(a,b){return a>>>b|a<<32-b}for(var d,e,f=Math.pow,g=f(2,32),h="length",i="",j=[],k=8*b[h],l=a.h=a.h||[],m=a.k=a.k||[],n=m[h],o={},p=2;64>n;p++)if(!o[p]){for(d=0;313>d;d+=p)o[d]=p;l[n]=f(p,.5)*g|0,m[n++]=f(p,1/3)*g|0}for(b+="€",e=[];b[h]%64-56;)b+="\x00";for(d=0;d<b[h];d++)if(e=d>>2,j[e]|=(b.charCodeAt(d)&255)<<24-8*(d%4),d==(b[h]-1))for(j[e]|=128<<24-8*(d%4),j[14+(d+64>>6<<4)]=k,n=0;n<j[h];n+=16){for(b=l.slice(d=0),p=0;64>p;p++)b[8]=p+(e=b[4])&g-1,b[9]=b[0],b[10]=b[1],b[11]=b[2],b[12]=b[3],e=(e=(b[7]=b[6])+(c(e,6)^c(e,11)^c(e,25))+(e&b[5]^~e&b[6])+m[p]+(o[p]=16>p?j[n+p]:o[p-16]+(c(d=o[p-2],17)^c(d,19)^d>>>10)+o[p-7]+(c(d=o[p-15],7)^c(d,18)^d>>>3)|0))+(c(d=b[9],2)^c(d,13)^c(d,22))+(d&b[9]^d&b[10]^b[9]&b[10]),b[3]=b[3]+e|0,b[4]=b[4]+e|0,b=b.slice(0,8);for(p=0;8>p;p++)l[p]=l[p]+b[p]|0}for(p=0;8>p;p++){for(d=24;d>=0;d-=8)i+=(l[p]>>d&255).toString(16).padStart(2,"0");}return i};
 
-            function _0x_d(_0x_s) {
-                return atob(_0x_s);
-            }
+            // 3. 검증 로직
+            function _0x_d(_0x_s) { return atob(_0x_s); }
 
-            document.getElementById('_0x_btn').addEventListener('click', async function() {
-                const _0x_vi = document.getElementById('uid').value;
-                const _0x_vp = document.getElementById('upw').value;
+            document.getElementById('_0x_btn').addEventListener('click', function() {
+                const _0x_vi = document.getElementById('uid').value.trim(); // 공백 제거 추가
+                const _0x_vp = document.getElementById('upw').value.trim();
                 const _0x_m = document.getElementById('_0x_msg');
+                const _0x_btn = this;
 
-                // 입력값 없으면 리턴
                 if(!_0x_vi || !_0x_vp) {
                     _0x_m.innerText = "자격 증명을 입력하십시오.";
                     return;
                 }
 
-                // 버튼 비활성화 (중복 클릭 방지)
-                this.disabled = true;
-                this.innerText = "Verifying...";
+                _0x_btn.disabled = true;
+                _0x_btn.innerText = "Verifying...";
 
-                try {
-                    const _0x_hi = await _0x_h(_0x_vi);
-                    const _0x_hp = await _0x_h(_0x_vp);
+                // 약간의 지연을 주어 실제 로그인처럼 보이게 함 (Brute Force 방지 효과)
+                setTimeout(function() {
+                    try {
+                        // 순수 JS 함수로 해시 계산
+                        const _0x_hi = sha256(_0x_vi);
+                        const _0x_hp = sha256(_0x_vp);
 
-                    if (_0x_hi === _0x5a1._i && _0x_hp === _0x5a1._p) {
-                        // 인증 성공
-                        _0x_m.classList.remove('text-red-500');
-                        _0x_m.classList.add('text-green-500');
-                        _0x_m.innerText = "접근 승인됨. 이동 중...";
-                        setTimeout(() => {
-                            window.location.href = _0x_d(_0x5a1._u);
-                        }, 800);
-                    } else {
-                        // 인증 실패
+                        if (_0x_hi === _0x5a1._i && _0x_hp === _0x5a1._p) {
+                            _0x_m.classList.remove('text-red-500');
+                            _0x_m.classList.add('text-green-500');
+                            _0x_m.innerText = "승인됨. 페이지 이동 중...";
+                            setTimeout(() => {
+                                window.location.href = _0x_d(_0x5a1._u);
+                            }, 500);
+                        } else {
+                            throw new Error("Mismatch");
+                        }
+                    } catch (e) {
+                        _0x_m.classList.remove('text-green-500');
+                        _0x_m.classList.add('text-red-500');
                         _0x_m.innerText = "접근 거부: 정보가 일치하지 않습니다.";
-                        this.disabled = false;
-                        this.innerText = "LOGIN";
+                        _0x_btn.disabled = false;
+                        _0x_btn.innerText = "LOGIN";
                         document.getElementById('upw').value = '';
+                        document.getElementById('uid').focus();
                     }
-                } catch (e) {
-                    console.error("Secure Context Error");
-                    _0x_m.innerText = "보안 환경(HTTPS/Localhost)이 필요합니다.";
-                    this.disabled = false;
-                }
+                }, 300); 
             });
             
-            // Enter키 처리
             document.getElementById('upw').addEventListener('keypress', function(e) {
                 if (e.key === 'Enter') document.getElementById('_0x_btn').click();
+            });
+            document.getElementById('uid').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') document.getElementById('upw').focus();
             });
         })();
     </script>
