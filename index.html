@@ -23,6 +23,9 @@
         .tree-item { transition: all 0.2s; }
         .tree-header:hover { background-color: #f9fafb; }
         
+        /* 테이블 스타일 */
+        th { white-space: nowrap; }
+        
         /* 스크롤바 */
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: #f1f1f1; }
@@ -41,7 +44,6 @@
             </h1>
             <div class="h-6 w-px bg-gray-300 mx-2"></div>
             <div class="flex items-center gap-2">
-                <!-- [신규] 양식 다운로드 버튼 -->
                 <button onclick="downloadSample()" class="bg-gray-500 hover:bg-gray-600 text-white px-3 py-1.5 rounded text-sm cursor-pointer flex items-center shadow-sm transition">
                     <i class="fa-solid fa-download mr-2"></i>양식 다운로드
                 </button>
@@ -91,7 +93,7 @@
                 </div>
             </div>
 
-            <!-- 3. 하단: 인원 명단 -->
+            <!-- 3. 하단: 인원 명단 (컬럼 원복) -->
             <div class="flex-1 flex flex-col overflow-hidden">
                 <div class="p-2 bg-gray-50 border-b text-xs font-bold text-gray-600 flex justify-between items-center">
                     <div class="flex items-center gap-2">
@@ -102,14 +104,16 @@
                 </div>
 
                 <div class="flex-1 overflow-y-auto">
-                    <table class="w-full text-sm text-left border-collapse">
+                    <table class="w-full text-sm text-left border-collapse table-fixed">
                         <thead class="text-xs text-gray-500 uppercase bg-white sticky top-0 z-10 shadow-sm">
                             <tr>
-                                <th class="px-3 py-2 border-b w-8 text-center">
+                                <th class="px-2 py-2 border-b w-8 text-center">
                                     <i class="fa-solid fa-check text-gray-300"></i>
                                 </th>
-                                <th class="px-2 py-2 border-b">정보</th>
-                                <th class="px-2 py-2 border-b text-right">소속/상태</th>
+                                <th class="px-2 py-2 border-b w-20 text-center">교구/구역</th>
+                                <th class="px-2 py-2 border-b w-24">이름</th>
+                                <th class="px-2 py-2 border-b">주소</th>
+                                <th class="px-2 py-2 border-b w-12 text-center">출석</th>
                             </tr>
                         </thead>
                         <tbody id="personList" class="divide-y divide-gray-100">
@@ -152,7 +156,7 @@
             });
         };
 
-        // --- [신규] 샘플 양식 다운로드 함수 ---
+        // --- 양식 다운로드 ---
         function downloadSample() {
             const sampleData = [
                 { '이름': '홍길동', '주소': '서울특별시 중구 세종대로 110', '교구': '1교구', '구역': '1구역', '소속': '봉사회', '직분': '팀장', '출석여부': 'O' },
@@ -163,10 +167,7 @@
             ];
             
             const ws = XLSX.utils.json_to_sheet(sampleData);
-            // 컬럼 너비 자동 조절 (대략적으로)
-            const wscols = [
-                {wch: 10}, {wch: 40}, {wch: 10}, {wch: 10}, {wch: 15}, {wch: 10}, {wch: 10}
-            ];
+            const wscols = [{wch: 10}, {wch: 40}, {wch: 10}, {wch: 10}, {wch: 15}, {wch: 10}, {wch: 10}];
             ws['!cols'] = wscols;
 
             const wb = XLSX.utils.book_new();
@@ -411,6 +412,7 @@
             });
         }
 
+        // --- [수정] 테이블 렌더링 (컬럼 원복) ---
         function renderPersonList() {
             const tbody = document.getElementById('personList');
             tbody.innerHTML = '';
@@ -422,18 +424,28 @@
                 tr.className = `border-b list-row ${p.address ? '' : 'no-marker-row'}`;
                 
                 const colorHex = (PARISH_COLORS[p.parish] || PARISH_COLORS['default']).hex;
+                const badgeStyle = `background-color: ${colorHex}1A; color: ${colorHex}; border: 1px solid ${colorHex}40;`;
 
                 tr.innerHTML = `
-                    <td class="px-3 py-2 text-center">
+                    <td class="px-2 py-2 text-center">
                         <input type="checkbox" ${p.checked ? 'checked' : ''} onchange="togglePerson(${p.id}, this.checked)" class="rounded text-blue-600 focus:ring-0">
                     </td>
-                    <td class="px-2 py-2" onclick="highlightPerson(${p.id})">
-                        <div class="font-bold text-gray-800 text-sm">${p.name} <span class="font-normal text-xs text-gray-500">(${p.role})</span></div>
-                        <div class="text-xs text-gray-400 truncate w-[120px]">${p.address || '주소 없음'}</div>
+                    <td class="px-2 py-2 text-center" onclick="highlightPerson(${p.id})">
+                        <span class="text-xs font-bold px-2 py-1 rounded whitespace-nowrap" style="${badgeStyle}">
+                            ${p.parish} ${p.zone}
+                        </span>
+                        <div class="text-[10px] text-gray-500 mt-1">${p.group}</div>
                     </td>
-                    <td class="px-2 py-2 text-right" onclick="highlightPerson(${p.id})">
-                        <div class="text-xs font-bold" style="color: ${colorHex}">${p.parish} ${p.zone}</div>
-                        <div class="text-xs bg-gray-100 inline-block px-1 rounded text-gray-600 mt-0.5">${p.group}</div>
+                    <td class="px-2 py-2 font-medium text-gray-800 text-sm truncate" onclick="highlightPerson(${p.id})">
+                        ${p.name} <span class="text-xs text-gray-400">(${p.role})</span>
+                    </td>
+                    <td class="px-2 py-2 text-xs text-gray-500 truncate" title="${p.address}" onclick="highlightPerson(${p.id})">
+                        ${p.address || '<span class="text-red-400">주소 없음</span>'}
+                    </td>
+                    <td class="px-2 py-2 text-center" onclick="highlightPerson(${p.id})">
+                        <span class="px-2 py-0.5 rounded-full text-xs font-bold text-white ${p.attendance === 'O' ? 'bg-green-500' : 'bg-gray-400'}">
+                            ${p.attendance}
+                        </span>
                     </td>
                 `;
                 fragment.appendChild(tr);
