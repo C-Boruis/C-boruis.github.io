@@ -23,9 +23,9 @@
         .selected-row { background-color: #eff6ff !important; border-left: 4px solid #2563eb; }
         
         /* 구역 아이템 스타일 */
-        .zone-item { transition: all 0.2s; }
-        .zone-item:hover { transform: translateX(2px); }
-        .zone-selected { border: 2px solid #2563eb; background-color: #eff6ff; }
+        .zone-item { transition: all 0.2s; border-left-width: 6px; } /* 색상 띠 강조 */
+        .zone-item:hover { transform: translateX(2px); background-color: #f8fafc; }
+        .zone-selected { background-color: #eff6ff; box-shadow: inset 0 0 0 1px #bfdbfe; }
 
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: #f1f1f1; }
@@ -100,7 +100,7 @@
                         <span>생성된 구역 목록</span>
                         <button onclick="viewAllData()" class="text-blue-600 hover:underline cursor-pointer text-xs font-medium">전체 보기</button>
                     </div>
-                    <div id="zoneListContainer" class="space-y-2 max-h-[150px] overflow-y-auto pr-1">
+                    <div id="zoneListContainer" class="space-y-2 max-h-[180px] overflow-y-auto pr-1">
                         <div class="text-center py-4 text-gray-400 text-xs bg-gray-50 rounded border border-dashed">
                             생성된 구역이 없습니다.<br>지도의 '구역 그리기'를 이용하세요.
                         </div>
@@ -141,22 +141,19 @@
 
     <script>
         // --- 설정 및 전역 변수 ---
-        const COLORS = ['#EF4444', '#F59E0B', '#10B981', '#3B82F6', '#8B5CF6', '#EC4899', '#6366F1']; // 구역 색상 팔레트
-        
-        // 마커 이미지 설정
         const MARKER_NORMAL = "https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/markerStar.png"; // 파란색(기본)
         const MARKER_SELECTED = "https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/marker_red.png"; // 빨간색(선택됨)
 
         let map, geocoder, drawingManager;
         let allData = []; // 전체 데이터 저장
-        let zones = [];   // 생성된 구역(Polygon) 정보 저장 [{id, polygon, color, count, name}]
+        let zones = [];   // 생성된 구역(Polygon) 정보 저장
         let zoneCounter = 1; // 구역 번호 부여용
-        let selectedMarker = null; // 현재 선택된 마커 객체 (색상 변경용)
+        let selectedMarker = null; // 현재 선택된 마커
 
         // --- 1. 초기화 ---
         window.onload = function() {
             if (!window.kakao || !window.kakao.maps) {
-                alert("API 키 오류: 코드를 열어 YOUR_KAKAO_API_KEY를 실제 키로 변경해주세요.\n(또는 로컬 서버가 아닌 file:// 실행 시 보안 문제일 수 있습니다)");
+                alert("API 키 오류: 코드를 열어 YOUR_KAKAO_API_KEY를 확인해주세요.");
                 return;
             }
 
@@ -165,10 +162,8 @@
                 const options = { center: new kakao.maps.LatLng(37.566826, 126.9786567), level: 7 };
                 map = new kakao.maps.Map(container, options);
                 
-                // Geocoder 객체 생성 (이 시점에 반드시 생성되어야 함)
                 geocoder = new kakao.maps.services.Geocoder();
 
-                // 그리기 관리자 설정
                 drawingManager = new kakao.maps.drawing.DrawingManager({
                     map: map,
                     drawingMode: [kakao.maps.drawing.OverlayType.POLYGON],
@@ -182,12 +177,19 @@
                     }
                 });
 
-                // 구역 그리기 완료 이벤트
+                // 구역 그리기 완료 이벤트 등록
                 drawingManager.addListener('drawend', onDrawEnd);
             });
         };
 
-        // --- 2. 엑셀 데이터 처리 ---
+        // --- 2. 랜덤 색상 생성 함수 (가시성 높은 색상 위주) ---
+        function getRandomColor() {
+            // 채도(S)와 명도(L)를 고정하여 너무 어둡거나 밝지 않은 선명한 색상 생성
+            const hue = Math.floor(Math.random() * 360);
+            return `hsl(${hue}, 70%, 50%)`;
+        }
+
+        // --- 3. 엑셀 데이터 처리 ---
         function handleFileUpload(event) {
             const file = event.target.files[0];
             if (!file) return;
@@ -199,38 +201,30 @@
                     const workbook = XLSX.read(data, { type: 'array' });
                     const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
                     
-                    if (jsonData.length > 0) {
-                        processData(jsonData);
-                    } else {
-                        alert("엑셀 파일에 데이터가 비어있습니다.");
-                    }
+                    if (jsonData.length > 0) processData(jsonData);
+                    else alert("엑셀 파일에 데이터가 없습니다.");
                 } catch (err) {
                     console.error(err);
                     alert("엑셀 파일을 읽는 중 오류가 발생했습니다.");
                 }
             };
             reader.readAsArrayBuffer(file);
-            
-            // [중요] 같은 파일을 다시 선택해도 이벤트가 발생하도록 값 초기화
-            event.target.value = '';
+            event.target.value = ''; // 재업로드 허용
         }
 
         async function processData(data) {
-            // 지도나 Geocoder가 준비되지 않았을 경우 방어
             if (!geocoder || !map) {
-                alert("지도가 아직 완전히 로드되지 않았습니다. 잠시 후 다시 시도해주세요.");
+                alert("지도가 로드되지 않았습니다. 잠시 후 다시 시도해주세요.");
                 return;
             }
 
-            document.getElementById('statusMsg').innerText = `데이터 ${data.length}건 처리 시작...`;
+            document.getElementById('statusMsg').innerText = `데이터 ${data.length}건 처리 중...`;
             
-            // 초기화: 기존 마커 삭제
+            // 기존 데이터 초기화
             if(allData.length > 0) allData.forEach(d => d.marker.setMap(null));
             allData = [];
             
             let processed = 0;
-            
-            // 마커 이미지 객체 생성
             const normalImageSize = new kakao.maps.Size(24, 35);
             const normalMarkerImage = new kakao.maps.MarkerImage(MARKER_NORMAL, normalImageSize);
 
@@ -238,11 +232,7 @@
                 const name = row['이름'] || row['Name'] || '미상';
                 const address = row['주소'] || row['Address'] || '';
                 
-                // 주소가 없으면 건너뜀
-                if (!address) {
-                    console.log(`Row ${idx}: 주소 없음`);
-                    continue;
-                }
+                if (!address) continue;
 
                 await new Promise(resolve => {
                     geocoder.addressSearch(address, (result, status) => {
@@ -255,10 +245,9 @@
                                 map: map,
                                 position: latLng,
                                 title: name,
-                                image: normalMarkerImage // 기본 이미지 적용
+                                image: normalMarkerImage
                             });
 
-                            // 데이터 객체 생성
                             const personData = { 
                                 id: idx, name, address, 
                                 role: row['직분'] || '-', 
@@ -266,37 +255,22 @@
                                 lat, lng, marker 
                             };
 
-                            // 마커 클릭 이벤트 연결
                             kakao.maps.event.addListener(marker, 'click', () => highlightPerson(personData));
-
                             allData.push(personData);
                             processed++;
-                        } else {
-                            console.warn(`주소 변환 실패: ${address} (Status: ${status})`);
                         }
-                        resolve(); // 성공이든 실패든 루프 진행을 위해 resolve
+                        resolve();
                     });
                 });
                 
-                // 진행률 표시 (너무 자주 업데이트하면 느려지므로 5건 단위)
-                if (idx % 5 === 0) {
-                    document.getElementById('statusMsg').innerText = `${idx + 1}/${data.length}건 분석 중...`;
-                }
+                if (idx % 5 === 0) document.getElementById('statusMsg').innerText = `${idx + 1}/${data.length}건 변환...`;
             }
 
-            if (processed === 0) {
-                document.getElementById('statusMsg').innerText = "변환 실패 (API 키 확인 필요)";
-                alert("주소를 좌표로 변환하지 못했습니다.\n1. 엑셀의 '주소' 컬럼이 정확한지 확인하세요.\n2. API 키에 '로컬(주소검색)' 권한이 켜져있는지 확인하세요.");
-            } else {
-                document.getElementById('statusMsg').innerText = `완료 (${processed}건 성공)`;
-            }
-            
+            document.getElementById('statusMsg').innerText = `완료 (${processed}건)`;
             document.getElementById('totalCount').innerText = processed;
             
-            // 전체 보기 렌더링
             renderTable(allData);
             
-            // 지도 범위 재설정
             if(allData.length > 0) {
                 const bounds = new kakao.maps.LatLngBounds();
                 allData.forEach(d => bounds.extend(d.marker.getPosition()));
@@ -304,24 +278,20 @@
             }
         }
 
-        // --- 3. 마커 강조 (Highlight) 로직 ---
+        // --- 4. 마커 강조 ---
         function highlightPerson(person) {
-            // 1. 이전에 선택된 마커가 있다면 원래대로 복구
             if (selectedMarker) {
-                const normalImg = new kakao.maps.MarkerImage(MARKER_NORMAL, new kakao.maps.Size(24, 35));
-                selectedMarker.setImage(normalImg);
-                selectedMarker.setZIndex(0); // 우선순위 낮춤
+                selectedMarker.setImage(new kakao.maps.MarkerImage(MARKER_NORMAL, new kakao.maps.Size(24, 35)));
+                selectedMarker.setZIndex(0);
             }
 
-            // 2. 새로 선택된 마커 강조 (빨간색)
-            const selectedImg = new kakao.maps.MarkerImage(MARKER_SELECTED, new kakao.maps.Size(29, 42)); // 조금 더 크게
+            const selectedImg = new kakao.maps.MarkerImage(MARKER_SELECTED, new kakao.maps.Size(29, 42));
             person.marker.setImage(selectedImg);
-            person.marker.setZIndex(999); // 지도 맨 위로 올림
+            person.marker.setZIndex(999);
             
-            selectedMarker = person.marker; // 현재 선택된 마커 갱신
-            map.panTo(person.marker.getPosition()); // 지도 중심 이동
+            selectedMarker = person.marker;
+            map.panTo(person.marker.getPosition());
 
-            // 3. 리스트에서도 강조 표시
             document.querySelectorAll('.list-row').forEach(r => r.classList.remove('selected-row'));
             const targetRow = document.getElementById(`row-${person.id}`);
             if (targetRow) {
@@ -330,7 +300,7 @@
             }
         }
 
-        // --- 4. 구역(Polygon) 관리 및 색상 지정 ---
+        // --- 5. 구역(Polygon) 그리기 및 목록 관리 ---
         function selectOverlay(type) {
             if(!drawingManager) return;
             drawingManager.cancel();
@@ -341,12 +311,12 @@
         function onDrawEnd(data) {
             document.getElementById('drawGuide').classList.add('hidden');
             
-            const polygon = data.target; // 그려진 폴리곤 객체
+            const polygon = data.target;
             
-            // 색상 자동 할당 (순환)
-            const color = COLORS[(zoneCounter - 1) % COLORS.length];
+            // [수정] 랜덤 색상 적용
+            const color = getRandomColor();
             
-            // 폴리곤 스타일 변경 (색상 입히기)
+            // 폴리곤 스타일 적용
             polygon.setOptions({
                 fillColor: color,
                 strokeColor: color
@@ -356,7 +326,7 @@
             const path = polygon.getPath();
             const insidePeople = allData.filter(p => isInsidePolygon({x: p.lng, y: p.lat}, path));
 
-            // 구역 정보 저장
+            // 구역 데이터 생성
             const zoneId = zoneCounter++;
             const zoneName = `구역 ${zoneId}`;
             
@@ -369,16 +339,15 @@
             };
             zones.push(zoneData);
 
-            // UI 업데이트
+            // 목록 갱신 및 필터링
             renderZoneList();
-            
-            // 자동으로 해당 구역 필터링해서 보여주기
             filterByZone(zoneId);
         }
 
-        // --- 5. 구역 목록 UI 및 필터링 ---
+        // 구역 목록 렌더링 (랜덤 색상 적용)
         function renderZoneList() {
             const container = document.getElementById('zoneListContainer');
+            
             if (zones.length === 0) {
                 container.innerHTML = `<div class="text-center py-4 text-gray-400 text-xs bg-gray-50 rounded border border-dashed">생성된 구역이 없습니다.</div>`;
                 return;
@@ -387,17 +356,22 @@
             container.innerHTML = '';
             zones.forEach(zone => {
                 const div = document.createElement('div');
-                div.className = `zone-item flex justify-between items-center p-2 bg-white border rounded shadow-sm cursor-pointer mb-2 border-l-4`;
-                div.style.borderLeftColor = zone.color; // 구역 색상 표시
+                div.className = `zone-item flex justify-between items-center p-2 bg-white border rounded shadow-sm cursor-pointer mb-2`;
+                
+                // [수정] 랜덤 색상을 왼쪽 테두리에 적용하여 구분
+                div.style.borderLeftColor = zone.color;
+                
                 div.onclick = () => filterByZone(zone.id);
                 
                 div.innerHTML = `
                     <div class="flex items-center gap-2">
                         <span class="font-bold text-gray-700 text-sm">${zone.name}</span>
-                        <span class="bg-gray-100 text-gray-600 text-xs px-1.5 py-0.5 rounded">${zone.people.length}명</span>
+                        <span class="bg-gray-100 text-gray-600 text-xs px-1.5 py-0.5 rounded border">
+                            <i class="fa-solid fa-user-group mr-1 text-gray-400"></i>${zone.people.length}
+                        </span>
                     </div>
                     <button onclick="deleteZone(event, ${zone.id})" class="text-gray-400 hover:text-red-500 p-1 rounded hover:bg-red-50 transition">
-                        <i class="fa-solid fa-xmark"></i>
+                        <i class="fa-solid fa-trash-can"></i>
                     </button>
                 `;
                 container.appendChild(div);
@@ -408,35 +382,50 @@
             const zone = zones.find(z => z.id === zoneId);
             if (!zone) return;
 
-            // 리스트 하이라이트 효과
+            // 선택된 구역 UI 강조
             document.querySelectorAll('.zone-item').forEach(el => el.classList.remove('zone-selected'));
-            const clickedItem = Array.from(document.querySelectorAll('.zone-item')).find(el => el.innerHTML.includes(zone.name));
-            if(clickedItem) clickedItem.classList.add('zone-selected');
-
-            document.getElementById('currentFilterName').innerText = `${zone.name} (색상구분)`;
-            document.getElementById('currentFilterName').style.color = zone.color;
             
-            renderTable(zone.people); // 필터링된 데이터만 렌더링
-        }
+            // 현재 선택된 구역 찾아서 스타일 적용
+            const items = document.getElementById('zoneListContainer').children;
+            // 목록을 순회하며 클릭된 zoneId와 매칭되는지 확인 (인덱스나 이름으로 찾기보다 id로 찾는게 안전하지만, 여기선 순서대로 렌더링됨을 이용)
+            // 더 정확히는 렌더링 시 data-id 속성을 주면 좋지만, 간단히 구현:
+            for (let item of items) {
+                if (item.innerHTML.includes(zone.name)) {
+                    item.classList.add('zone-selected');
+                    break;
+                }
+            }
 
-        function viewAllData() {
-            document.querySelectorAll('.zone-item').forEach(el => el.classList.remove('zone-selected'));
-            document.getElementById('currentFilterName').innerText = "전체 보기";
-            document.getElementById('currentFilterName').style.color = "#2563eb";
-            renderTable(allData);
+            const titleEl = document.getElementById('currentFilterName');
+            titleEl.innerText = `${zone.name} (선택됨)`;
+            titleEl.style.color = zone.color; // 제목 색상도 구역 색상으로 변경
+            titleEl.style.fontWeight = 'bold';
+            
+            renderTable(zone.people);
         }
 
         function deleteZone(e, zoneId) {
-            e.stopPropagation(); // 부모 클릭 방지
+            e.stopPropagation();
             if(!confirm("이 구역을 삭제하시겠습니까?")) return;
 
             const idx = zones.findIndex(z => z.id === zoneId);
             if(idx > -1) {
-                zones[idx].polygon.setMap(null); // 지도에서 제거
-                zones.splice(idx, 1); // 배열에서 제거
+                zones[idx].polygon.setMap(null);
+                zones.splice(idx, 1);
                 renderZoneList();
-                viewAllData(); // 전체 보기로 복귀
+                viewAllData();
             }
+        }
+
+        function viewAllData() {
+            document.querySelectorAll('.zone-item').forEach(el => el.classList.remove('zone-selected'));
+            
+            const titleEl = document.getElementById('currentFilterName');
+            titleEl.innerText = "전체 보기";
+            titleEl.style.color = "#2563eb";
+            titleEl.style.fontWeight = 'normal';
+
+            renderTable(allData);
         }
 
         function resetAll() {
@@ -452,7 +441,6 @@
             document.getElementById('totalCount').innerText = "0";
         }
 
-        // --- 6. 공통 함수 (알고리즘 & 테이블) ---
         function renderTable(data) {
             document.getElementById('currentViewCount').innerText = data.length;
             const tbody = document.getElementById('personList');
@@ -477,7 +465,7 @@
                         </span>
                     </td>
                 `;
-                tr.onclick = () => highlightPerson(item); // 클릭 시 마커 강조
+                tr.onclick = () => highlightPerson(item);
                 tbody.appendChild(tr);
             });
         }
