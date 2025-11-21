@@ -17,7 +17,7 @@
     <div class="bg-slate-800 p-8 rounded-lg shadow-2xl w-96 border border-slate-700">
         <div class="text-center mb-8">
             <h1 class="text-2xl font-bold text-white tracking-wider">SECURE ACCESS</h1>
-            <p class="text-slate-400 text-sm mt-2">인가된 사용자만 접근 가능합니다.</p>
+            <p class="text-slate-400 text-sm mt-2">인가된 사용자만 접근 가능</p>
         </div>
 
         <form id="_0x_frm" onsubmit="return false;">
@@ -52,14 +52,92 @@
                 _u: "em9uZV9tYW5hZ2VyLmh0bWw=" // zone_manager.html
             };
 
-            // 2. 순수 JS SHA-256 구현 (환경 독립적)
-            var sha256=function a(b){function c(a,b){return a>>>b|a<<32-b}for(var d,e,f=Math.pow,g=f(2,32),h="length",i="",j=[],k=8*b[h],l=a.h=a.h||[],m=a.k=a.k||[],n=m[h],o={},p=2;64>n;p++)if(!o[p]){for(d=0;313>d;d+=p)o[d]=p;l[n]=f(p,.5)*g|0,m[n++]=f(p,1/3)*g|0}for(b+="€",e=[];b[h]%64-56;)b+="\x00";for(d=0;d<b[h];d++)if(e=d>>2,j[e]|=(b.charCodeAt(d)&255)<<24-8*(d%4),d==(b[h]-1))for(j[e]|=128<<24-8*(d%4),j[14+(d+64>>6<<4)]=k,n=0;n<j[h];n+=16){for(b=l.slice(d=0),p=0;64>p;p++)b[8]=p+(e=b[4])&g-1,b[9]=b[0],b[10]=b[1],b[11]=b[2],b[12]=b[3],e=(e=(b[7]=b[6])+(c(e,6)^c(e,11)^c(e,25))+(e&b[5]^~e&b[6])+m[p]+(o[p]=16>p?j[n+p]:o[p-16]+(c(d=o[p-2],17)^c(d,19)^d>>>10)+o[p-7]+(c(d=o[p-15],7)^c(d,18)^d>>>3)|0))+(c(d=b[9],2)^c(d,13)^c(d,22))+(d&b[9]^d&b[10]^b[9]&b[10]),b[3]=b[3]+e|0,b[4]=b[4]+e|0,b=b.slice(0,8);for(p=0;8>p;p++)l[p]=l[p]+b[p]|0}for(p=0;8>p;p++){for(d=24;d>=0;d-=8)i+=(l[p]>>d&255).toString(16).padStart(2,"0");}return i};
+            function sha256(ascii) {
+                function rightRotate(value, amount) {
+                    return (value >>> amount) | (value << (32 - amount));
+                }
+                
+                var mathPow = Math.pow;
+                var maxWord = mathPow(2, 32);
+                var lengthProperty = 'length';
+                var i, j; 
+                var result = '';
+
+                var words = [];
+                var asciiBitLength = ascii[lengthProperty] * 8;
+                
+                var hash = sha256.h = sha256.h || [];
+                var k = sha256.k = sha256.k || [];
+                var primeCounter = k[lengthProperty];
+
+                var isComposite = {};
+                for (var candidate = 2; primeCounter < 64; candidate++) {
+                    if (!isComposite[candidate]) {
+                        for (i = 0; i < 313; i += candidate) {
+                            isComposite[i] = candidate;
+                        }
+                        hash[primeCounter] = (mathPow(candidate, .5) * maxWord) | 0;
+                        k[primeCounter++] = (mathPow(candidate, 1 / 3) * maxWord) | 0;
+                    }
+                }
+                
+                ascii += '\x80'; 
+                while (ascii[lengthProperty] % 64 - 56) ascii += '\x00'; 
+                for (i = 0; i < ascii[lengthProperty]; i++) {
+                    j = ascii.charCodeAt(i);
+                    if (j >> 8) return; // ASCII only support
+                    words[i >> 2] |= j << ((3 - i) % 4) * 8;
+                }
+                words[words[lengthProperty]] = ((asciiBitLength / maxWord) | 0);
+                words[words[lengthProperty]] = (asciiBitLength)
+                
+                for (j = 0; j < words[lengthProperty];) {
+                    var w = words.slice(j, j += 16);
+                    var oldHash = hash;
+                    hash = hash.slice(0, 8);
+                    
+                    for (i = 0; i < 64; i++) {
+                        var i2 = i + j;
+                        var w15 = w[i - 15], w2 = w[i - 2];
+                        var a = hash[0], e = hash[4];
+                        var temp1 = hash[7] +
+                            (rightRotate(e, 6) ^ rightRotate(e, 11) ^ rightRotate(e, 25)) + 
+                            ((e & hash[5]) ^ ((~e) & hash[6])) + 
+                            k[i] + 
+                            (w[i] = (i < 16) ? w[i] : (
+                                w[i - 16] +
+                                (rightRotate(w15, 7) ^ rightRotate(w15, 18) ^ (w15 >>> 3)) + 
+                                w[i - 7] +
+                                (rightRotate(w2, 17) ^ rightRotate(w2, 19) ^ (w2 >>> 10))
+                            ) | 0
+                        );
+                        var temp2 = (rightRotate(a, 2) ^ rightRotate(a, 13) ^ rightRotate(a, 22)) + 
+                            ((a & hash[1]) ^ (a & hash[2]) ^ (hash[1] & hash[2]));
+                        
+                        hash = [(temp1 + temp2) | 0].concat(hash); 
+                        hash[4] = (hash[4] + temp1) | 0;
+                    }
+                    
+                    for (i = 0; i < 8; i++) {
+                        hash[i] = (hash[i] + oldHash[i]) | 0;
+                    }
+                }
+                
+                for (i = 0; i < 8; i++) {
+                    for (j = 3; j + 1; j--) {
+                        var b = (hash[i] >> (j * 8)) & 255;
+                        result += ((b < 16) ? 0 : '') + b.toString(16);
+                    }
+                }
+                return result;
+            }
 
             // 3. 검증 로직
             function _0x_d(_0x_s) { return atob(_0x_s); }
 
             document.getElementById('_0x_btn').addEventListener('click', function() {
-                const _0x_vi = document.getElementById('uid').value.trim(); // 공백 제거 추가
+                // 공백 제거(trim) 후 처리
+                const _0x_vi = document.getElementById('uid').value.trim(); 
                 const _0x_vp = document.getElementById('upw').value.trim();
                 const _0x_m = document.getElementById('_0x_msg');
                 const _0x_btn = this;
@@ -72,12 +150,13 @@
                 _0x_btn.disabled = true;
                 _0x_btn.innerText = "Verifying...";
 
-                // 약간의 지연을 주어 실제 로그인처럼 보이게 함 (Brute Force 방지 효과)
                 setTimeout(function() {
                     try {
-                        // 순수 JS 함수로 해시 계산
                         const _0x_hi = sha256(_0x_vi);
                         const _0x_hp = sha256(_0x_vp);
+
+                        // console.log(_0x_hi); // 디버깅용 (배포시 삭제 권장)
+                        // console.log(_0x_hp); // 디버깅용
 
                         if (_0x_hi === _0x5a1._i && _0x_hp === _0x5a1._p) {
                             _0x_m.classList.remove('text-red-500');
