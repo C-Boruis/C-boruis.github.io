@@ -57,7 +57,6 @@
                     <i class="fa-solid fa-file-excel mr-2"></i>업로드
                 </label>
                 
-                <!-- [신규] 엑셀 저장 버튼 -->
                 <button onclick="exportToExcel()" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded text-sm cursor-pointer flex items-center shadow-sm transition">
                     <i class="fa-solid fa-floppy-disk mr-2"></i>엑셀 저장
                 </button>
@@ -81,9 +80,9 @@
         <div class="w-[35%] flex flex-col bg-white h-full shadow-xl z-30">
             
             <!-- 1. 상단: 통계 현황 -->
-            <div class="h-[40%] flex flex-col border-b bg-white">
+            <div class="h-[35%] flex flex-col border-b bg-white">
                 <div class="p-3 border-b bg-gray-50 font-bold text-gray-700 text-sm flex justify-between items-center">
-                    <span><i class="fa-solid fa-sitemap mr-2 text-blue-500"></i>조직 통계 및 필터</span>
+                    <span><i class="fa-solid fa-sitemap mr-2 text-blue-500"></i>조직 통계</span>
                     <span class="text-xs font-normal bg-white border px-2 py-0.5 rounded text-gray-500">총원: <span id="totalCount">0</span>명</span>
                 </div>
                 <div id="statsTreeContainer" class="flex-1 overflow-y-auto p-2 space-y-2">
@@ -92,24 +91,38 @@
             </div>
 
             <!-- 2. 중단: 선택 요약 -->
-            <div class="bg-blue-50 border-b border-blue-100 p-3 shrink-0 transition-all" id="selectionSummaryPanel">
+            <div class="bg-blue-50 border-b border-blue-100 p-2 shrink-0 transition-all text-xs" id="selectionSummaryPanel">
                 <div class="flex justify-between items-center mb-1">
-                    <span class="text-xs font-bold text-blue-800"><i class="fa-solid fa-check-double mr-1"></i>현재 체크된 인원 현황</span>
-                    <span class="text-xs font-bold text-blue-600"><span id="selectedCount">0</span>명</span>
+                    <span class="font-bold text-blue-800"><i class="fa-solid fa-check-double mr-1"></i>체크된 인원</span>
+                    <span class="font-bold text-blue-600"><span id="selectedCount">0</span>명</span>
                 </div>
-                <div id="selectionTags" class="flex flex-wrap gap-1 max-h-[60px] overflow-y-auto text-[10px]">
-                    <span class="text-gray-400 px-1">선택된 인원이 없습니다.</span>
+                <div id="selectionTags" class="flex flex-wrap gap-1 max-h-[40px] overflow-y-auto text-[10px]">
+                    <span class="text-gray-400 px-1">없음</span>
                 </div>
             </div>
 
-            <!-- 3. 하단: 인원 명단 -->
+            <!-- 3. 하단: 인원 명단 (필터 추가) -->
             <div class="flex-1 flex flex-col overflow-hidden">
-                <div class="p-2 bg-gray-50 border-b text-xs font-bold text-gray-600 flex justify-between items-center">
-                    <div class="flex items-center gap-2">
-                        <input type="checkbox" id="checkAll" onchange="toggleAll(this.checked)" checked class="rounded text-blue-600 focus:ring-0">
-                        <label for="checkAll" class="cursor-pointer">전체 선택/해제</label>
+                <!-- [신규] 필터 컨트롤 바 -->
+                <div class="p-2 bg-gray-100 border-b flex flex-col gap-2">
+                    <div class="flex gap-2 text-xs">
+                        <select id="filterParish" onchange="applyListFilter()" class="border rounded px-2 py-1 flex-1 bg-white">
+                            <option value="">전체 교구</option>
+                        </select>
+                        <select id="filterZone" onchange="applyListFilter()" class="border rounded px-2 py-1 flex-1 bg-white">
+                            <option value="">전체 구역</option>
+                        </select>
                     </div>
-                    <span id="currentFilterName" class="font-normal text-gray-400">전체 목록</span>
+                    <div class="flex gap-2 text-xs items-center">
+                        <div class="relative flex-1">
+                            <i class="fa-solid fa-magnifying-glass absolute left-2 top-1.5 text-gray-400"></i>
+                            <input type="text" id="filterName" onkeyup="applyListFilter()" placeholder="이름 검색" class="w-full border rounded pl-7 pr-2 py-1">
+                        </div>
+                        <div class="flex items-center gap-1 whitespace-nowrap">
+                            <input type="checkbox" id="checkAll" onchange="toggleAll(this.checked)" checked class="rounded text-blue-600 focus:ring-0">
+                            <label for="checkAll" class="cursor-pointer text-gray-600">전체선택</label>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="flex-1 overflow-y-auto overflow-x-auto">
@@ -134,24 +147,22 @@
         </div>
     </main>
 
-    <!-- [신규] 정보 수정 모달 -->
+    <!-- 수정 모달 -->
     <div id="editModal" class="fixed inset-0 z-50 hidden flex items-center justify-center modal-overlay">
         <div class="bg-white rounded-lg shadow-lg w-[400px] p-6 relative">
             <h3 class="text-lg font-bold text-gray-800 mb-4 border-b pb-2"><i class="fa-solid fa-user-pen mr-2 text-blue-600"></i>정보 수정</h3>
             <input type="hidden" id="editId">
-            
             <div class="space-y-3 text-sm">
                 <div class="grid grid-cols-2 gap-3">
                     <div>
                         <label class="block text-gray-600 mb-1">이름</label>
-                        <input type="text" id="editName" class="w-full border rounded px-2 py-1.5 focus:outline-none focus:border-blue-500">
+                        <input type="text" id="editName" class="w-full border rounded px-2 py-1.5">
                     </div>
                     <div>
                         <label class="block text-gray-600 mb-1">직분</label>
-                        <input type="text" id="editRole" class="w-full border rounded px-2 py-1.5 focus:outline-none focus:border-blue-500">
+                        <input type="text" id="editRole" class="w-full border rounded px-2 py-1.5">
                     </div>
                 </div>
-
                 <div class="grid grid-cols-2 gap-3">
                     <div>
                         <label class="block text-gray-600 mb-1">교구</label>
@@ -165,32 +176,28 @@
                     </div>
                     <div>
                         <label class="block text-gray-600 mb-1">구역</label>
-                        <input type="text" id="editZone" placeholder="예: 1구역" class="w-full border rounded px-2 py-1.5">
+                        <input type="text" id="editZone" class="w-full border rounded px-2 py-1.5">
                     </div>
                 </div>
-
                 <div>
-                    <label class="block text-gray-600 mb-1">소속 (그룹)</label>
+                    <label class="block text-gray-600 mb-1">소속</label>
                     <input type="text" id="editGroup" class="w-full border rounded px-2 py-1.5">
                 </div>
-
                 <div>
                     <label class="block text-gray-600 mb-1">주소</label>
                     <div class="flex gap-2">
                         <input type="text" id="editAddress" class="flex-1 border rounded px-2 py-1.5">
-                        <button onclick="alert('주소를 수정하고 저장하면 지도의 위치가 자동 변경됩니다.')" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-circle-info"></i></button>
+                        <button onclick="alert('주소 수정 시 지도 위치가 자동 변경됩니다.')" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-circle-info"></i></button>
                     </div>
                 </div>
-
                 <div>
                     <label class="block text-gray-600 mb-1">출석여부</label>
                     <div class="flex gap-4">
-                        <label class="flex items-center"><input type="radio" name="editAttendance" value="O" class="mr-1"> O (출석)</label>
-                        <label class="flex items-center"><input type="radio" name="editAttendance" value="X" class="mr-1"> X (결석)</label>
+                        <label><input type="radio" name="editAttendance" value="O" class="mr-1"> O (출석)</label>
+                        <label><input type="radio" name="editAttendance" value="X" class="mr-1"> X (결석)</label>
                     </div>
                 </div>
             </div>
-
             <div class="mt-6 flex justify-end gap-2">
                 <button onclick="closeEditModal()" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded text-gray-700 text-sm">취소</button>
                 <button onclick="saveEdit()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm font-bold">저장</button>
@@ -201,7 +208,6 @@
     <script type="text/javascript" src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=1d9268593ca620c81ee6929f1f2de6a3&libraries=services"></script>
 
     <script>
-        // --- 전역 변수 ---
         let map, geocoder;
         let allData = []; 
         let stats = {};   
@@ -215,7 +221,6 @@
             'default': { hex: '#6B7280', label: 'bg-gray-500' }
         };
 
-        // --- 초기화 ---
         window.onload = function() {
             initTableResizer();
             if (!window.kakao || !window.kakao.maps) {
@@ -230,44 +235,71 @@
             });
         };
 
-        // --- [신규] 엑셀 저장 (Export) ---
+        // --- [신규] 리스트 필터 로직 ---
+        function populateFilters() {
+            const parishSelect = document.getElementById('filterParish');
+            const zoneSelect = document.getElementById('filterZone');
+            
+            // 기존 옵션 제거 (첫번째 '전체' 제외)
+            while (parishSelect.options.length > 1) parishSelect.remove(1);
+            while (zoneSelect.options.length > 1) zoneSelect.remove(1);
+
+            // 교구 목록 추출 및 정렬
+            const parishes = [...new Set(allData.map(p => p.parish))].sort();
+            parishes.forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = p;
+                opt.innerText = p;
+                parishSelect.appendChild(opt);
+            });
+
+            // 구역 목록 추출 및 정렬 (숫자 기준 정렬 시도)
+            const zones = [...new Set(allData.map(p => p.zone))].sort((a, b) => {
+                const numA = parseInt(a.replace(/[^0-9]/g, '')) || 0;
+                const numB = parseInt(b.replace(/[^0-9]/g, '')) || 0;
+                return numA - numB || a.localeCompare(b);
+            });
+            zones.forEach(z => {
+                const opt = document.createElement('option');
+                opt.value = z;
+                opt.innerText = z;
+                zoneSelect.appendChild(opt);
+            });
+        }
+
+        function applyListFilter() {
+            const pFilter = document.getElementById('filterParish').value;
+            const zFilter = document.getElementById('filterZone').value;
+            const nFilter = document.getElementById('filterName').value.toLowerCase();
+
+            const filtered = allData.filter(p => {
+                const matchParish = pFilter === "" || p.parish === pFilter;
+                const matchZone = zFilter === "" || p.zone === zFilter;
+                const matchName = nFilter === "" || p.name.toLowerCase().includes(nFilter);
+                return matchParish && matchZone && matchName;
+            });
+
+            renderPersonList(filtered);
+        }
+
+        // --- 기존 로직들 ---
         function exportToExcel() {
-            if (allData.length === 0) {
-                alert("저장할 데이터가 없습니다.");
-                return;
-            }
-
-            // 엑셀용 데이터 형식으로 변환
+            if (allData.length === 0) { alert("저장할 데이터가 없습니다."); return; }
             const exportData = allData.map(p => ({
-                '이름': p.name,
-                '주소': p.address,
-                '교구': p.parish,
-                '구역': p.zone,
-                '소속': p.group,
-                '직분': p.role,
-                '출석여부': p.attendance
+                '이름': p.name, '주소': p.address, '교구': p.parish, '구역': p.zone,
+                '소속': p.group, '직분': p.role, '출석여부': p.attendance
             }));
-
             const ws = XLSX.utils.json_to_sheet(exportData);
-            // 컬럼 너비 설정
-            const wscols = [
-                {wch: 10}, {wch: 50}, {wch: 10}, {wch: 10}, {wch: 15}, {wch: 10}, {wch: 10}
-            ];
-            ws['!cols'] = wscols;
-
+            ws['!cols'] = [{wch: 10}, {wch: 50}, {wch: 10}, {wch: 10}, {wch: 15}, {wch: 10}, {wch: 10}];
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, "구역명단");
-            
-            // 파일명 생성 (날짜 포함)
             const date = new Date().toISOString().slice(0,10).replace(/-/g,"");
             XLSX.writeFile(wb, `구역관리_데이터_${date}.xlsx`);
         }
 
-        // --- [신규] 수정 모달 관련 ---
         function openEditModal(id) {
             const person = allData.find(p => p.id === id);
             if(!person) return;
-
             document.getElementById('editId').value = person.id;
             document.getElementById('editName').value = person.name;
             document.getElementById('editRole').value = person.role;
@@ -275,13 +307,8 @@
             document.getElementById('editZone').value = person.zone;
             document.getElementById('editGroup').value = person.group;
             document.getElementById('editAddress').value = person.address;
-            
-            // 라디오 버튼 처리
             const radios = document.getElementsByName('editAttendance');
-            for(const r of radios) {
-                r.checked = (r.value === person.attendance);
-            }
-
+            for(const r of radios) r.checked = (r.value === person.attendance);
             document.getElementById('editModal').classList.remove('hidden');
         }
 
@@ -301,39 +328,28 @@
             const newGroup = document.getElementById('editGroup').value;
             const newAddress = document.getElementById('editAddress').value;
             const newAttendance = document.querySelector('input[name="editAttendance"]:checked').value;
-
-            // 주소가 변경되었는지 확인
             const addressChanged = (person.address !== newAddress);
 
-            // 데이터 업데이트
             person.name = newName;
             person.role = newRole;
             person.parish = newParish;
             person.zone = newZone;
             person.group = newGroup;
             person.attendance = newAttendance;
-            
-            // 숫자 추출용 텍스트 업데이트
             person.markerText = newZone.replace(/[^0-9]/g, '');
 
-            // 주소가 바뀌었으면 위치 재검색
             if (addressChanged) {
                 person.address = newAddress;
                 if(newAddress.trim() === "") {
-                    // 주소를 지운 경우 -> 마커 삭제
                     if(person.marker) person.marker.setMap(null);
                     person.marker = null;
                 } else {
-                    // 주소 재검색
                     await new Promise(resolve => {
                         geocoder.addressSearch(newAddress, (result, status) => {
                             if (status === kakao.maps.services.Status.OK) {
                                 const lat = parseFloat(result[0].y);
                                 const lng = parseFloat(result[0].x);
-                                person.lat = lat;
-                                person.lng = lng;
-                                
-                                // 마커가 없었으면 새로 생성
+                                person.lat = lat; person.lng = lng;
                                 if (!person.marker) {
                                     person.marker = new kakao.maps.Marker({ map: map, zIndex: 1 });
                                     kakao.maps.event.addListener(person.marker, 'click', () => highlightPerson(person.id));
@@ -341,7 +357,7 @@
                                 person.marker.setPosition(new kakao.maps.LatLng(lat, lng));
                                 map.panTo(person.marker.getPosition());
                             } else {
-                                alert("입력한 주소를 지도에서 찾을 수 없습니다. 주소는 저장되지만 지도에는 표시되지 않습니다.");
+                                alert("주소 검색 실패. 지도에 표시되지 않습니다.");
                                 if(person.marker) person.marker.setMap(null);
                                 person.marker = null;
                             }
@@ -351,26 +367,22 @@
                 }
             }
 
-            // 마커 스타일 및 타이틀 업데이트 (주소가 유효하고 마커가 있을 때)
             if (person.marker) {
                 const colorInfo = PARISH_COLORS[person.parish] || PARISH_COLORS['default'];
                 const markerImg = createSvgMarker(colorInfo.hex, person.markerText);
                 person.originalImage = markerImg;
                 person.marker.setImage(markerImg);
                 person.marker.setTitle(`${person.name} (${person.group})`);
-                
-                // 현재 선택된 상태라면 하이라이트 갱신
-                if (selectedMarker === person.marker) {
-                     highlightPerson(person.id); 
-                }
+                if (selectedMarker === person.marker) highlightPerson(person.id);
             }
 
             closeEditModal();
-            updateStatsAndUI(); // UI 전체 갱신
+            updateStatsAndUI();
+            populateFilters(); // 수정 시 필터 옵션 갱신 가능성
+            applyListFilter(); // 현재 필터 상태 유지
             alert("수정되었습니다.");
         }
 
-        // --- 기존 로직 유지 ---
         function initTableResizer() {
             const table = document.getElementById('resizeTable');
             const cols = table.querySelectorAll('th');
@@ -380,8 +392,7 @@
                 let x = 0, w = 0;
                 const mouseDownHandler = function(e) {
                     x = e.clientX;
-                    const styles = window.getComputedStyle(col);
-                    w = parseInt(styles.width, 10);
+                    w = parseInt(window.getComputedStyle(col).width, 10);
                     document.addEventListener('mousemove', mouseMoveHandler);
                     document.addEventListener('mouseup', mouseUpHandler);
                     resizer.classList.add('resizing');
@@ -469,10 +480,7 @@
                                     zIndex: 1
                                 });
                                 person.originalImage = markerImg;
-                                
-                                kakao.maps.event.addListener(person.marker, 'click', () => {
-                                    highlightPerson(person.id);
-                                });
+                                kakao.maps.event.addListener(person.marker, 'click', () => highlightPerson(person.id));
                                 tempValid.push(person);
                             } else {
                                 tempInvalid.push(person);
@@ -489,6 +497,8 @@
             allData = [...tempValid, ...tempInvalid];
             document.getElementById('statusMsg').innerText = "완료";
             document.getElementById('totalCount').innerText = allData.length;
+            
+            populateFilters(); // [신규] 필터 옵션 채우기
             updateStatsAndUI();
             
             if (tempValid.length > 0) {
@@ -509,18 +519,16 @@
                 stats[p.parish].zones[p.zone].groups[p.group]++;
             });
             renderStatsTree();
-            renderPersonList();
+            applyListFilter(); // 필터 적용해서 렌더링
             updateSelectionSummary();
         }
 
         function renderStatsTree() {
             const container = document.getElementById('statsTreeContainer');
             container.innerHTML = '';
-
             Object.keys(stats).sort().forEach(parish => {
                 const pData = stats[parish];
                 const colorClass = (PARISH_COLORS[parish] || PARISH_COLORS['default']).label;
-                
                 const parishDiv = document.createElement('div');
                 parishDiv.className = "border rounded bg-white overflow-hidden shadow-sm text-sm";
                 parishDiv.innerHTML = `
@@ -553,9 +561,7 @@
                                 <span class="font-semibold text-gray-700 text-xs">└ ${zone}</span>
                                 <span class="text-[10px] text-gray-400">(${zData.total}명)</span>
                             </div>
-                            <div class="flex flex-wrap gap-1 pl-5">
-                                ${groupsHtml}
-                            </div>
+                            <div class="flex flex-wrap gap-1 pl-5">${groupsHtml}</div>
                         </div>
                     `;
                 });
@@ -568,46 +574,28 @@
             allData.forEach(p => {
                 let match = false;
                 if (level === 'parish' && p.parish === key) match = true;
-                else if (level === 'zone') {
-                    const [pa, zo] = key.split('|');
-                    if (p.parish === pa && p.zone === zo) match = true;
-                }
-                else if (level === 'group') {
-                    const [pa, zo, gr] = key.split('|');
-                    if (p.parish === pa && p.zone === zo && p.group === gr) match = true;
-                }
-                if (match) {
-                    p.checked = isChecked;
-                    updateMarkerVisibility(p);
-                }
+                else if (level === 'zone') { const [pa, zo] = key.split('|'); if (p.parish === pa && p.zone === zo) match = true; }
+                else if (level === 'group') { const [pa, zo, gr] = key.split('|'); if (p.parish === pa && p.zone === zo && p.group === gr) match = true; }
+                if (match) { p.checked = isChecked; updateMarkerVisibility(p); }
             });
-            renderPersonList();
+            applyListFilter(); 
             updateSelectionSummary();
         }
 
         function togglePerson(id, isChecked) {
             const person = allData.find(p => p.id === id);
-            if (person) {
-                person.checked = isChecked;
-                updateMarkerVisibility(person);
-                updateSelectionSummary();
-            }
+            if (person) { person.checked = isChecked; updateMarkerVisibility(person); updateSelectionSummary(); }
         }
 
         function toggleAll(isChecked) {
-            allData.forEach(p => {
-                p.checked = isChecked;
-                updateMarkerVisibility(p);
-            });
+            allData.forEach(p => { p.checked = isChecked; updateMarkerVisibility(p); });
             document.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = isChecked);
-            renderPersonList();
+            applyListFilter();
             updateSelectionSummary();
         }
 
         function updateMarkerVisibility(person) {
-            if (person.marker) {
-                person.marker.setMap(person.checked ? map : null);
-            }
+            if (person.marker) person.marker.setMap(person.checked ? map : null);
         }
 
         function updateSelectionSummary() {
@@ -615,15 +603,9 @@
             document.getElementById('selectedCount').innerText = checkedData.length;
             const container = document.getElementById('selectionTags');
             container.innerHTML = '';
-            if (checkedData.length === 0) {
-                container.innerHTML = '<span class="text-gray-400 px-1">선택된 인원이 없습니다.</span>';
-                return;
-            }
+            if (checkedData.length === 0) { container.innerHTML = '<span class="text-gray-400 px-1">선택된 인원이 없습니다.</span>'; return; }
             const summary = {};
-            checkedData.forEach(p => {
-                if (!summary[p.group]) summary[p.group] = 0;
-                summary[p.group]++;
-            });
+            checkedData.forEach(p => { if (!summary[p.group]) summary[p.group] = 0; summary[p.group]++; });
             Object.keys(summary).sort().forEach(group => {
                 const tag = document.createElement('span');
                 tag.className = "bg-white text-blue-600 border border-blue-200 px-1.5 py-0.5 rounded shadow-sm font-medium";
@@ -632,16 +614,18 @@
             });
         }
 
-        function renderPersonList() {
+        // --- [수정] 리스트 렌더링 (필터 적용) ---
+        function renderPersonList(dataToRender) {
+            // 인자가 없으면 전체 데이터 사용
+            const list = dataToRender || allData;
             const tbody = document.getElementById('personList');
             tbody.innerHTML = '';
             const fragment = document.createDocumentFragment();
 
-            allData.forEach(p => {
+            list.forEach(p => {
                 const tr = document.createElement('tr');
                 tr.id = `row-${p.id}`;
                 tr.className = `border-b list-row ${p.address ? '' : 'no-marker-row'}`;
-                
                 const colorHex = (PARISH_COLORS[p.parish] || PARISH_COLORS['default']).hex;
                 const badgeStyle = `background-color: ${colorHex}1A; color: ${colorHex}; border: 1px solid ${colorHex}40;`;
 
@@ -650,9 +634,7 @@
                         <input type="checkbox" ${p.checked ? 'checked' : ''} onchange="togglePerson(${p.id}, this.checked)" class="rounded text-blue-600 focus:ring-0">
                     </td>
                     <td class="px-2 py-2 text-center" onclick="highlightPerson(${p.id})">
-                        <span class="text-xs font-bold px-2 py-1 rounded whitespace-nowrap" style="${badgeStyle}">
-                            ${p.parish} ${p.zone}
-                        </span>
+                        <span class="text-xs font-bold px-2 py-1 rounded whitespace-nowrap" style="${badgeStyle}">${p.parish} ${p.zone}</span>
                         <div class="text-[10px] text-gray-500 mt-1">${p.group}</div>
                     </td>
                     <td class="px-2 py-2 font-medium text-gray-800 text-sm truncate" onclick="highlightPerson(${p.id})">${p.name}</td>
@@ -671,12 +653,7 @@
         }
 
         function createSvgMarker(color, text) {
-            const svg = `
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="35" height="45">
-                    <path fill="${color}" stroke="white" stroke-width="1" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>
-                    <circle cx="12" cy="9" r="4" fill="rgba(0,0,0,0.1)"/>
-                    <text x="12" y="13" font-size="10" font-weight="bold" fill="white" text-anchor="middle" font-family="sans-serif">${text}</text>
-                </svg>`;
+            const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="35" height="45"><path fill="${color}" stroke="white" stroke-width="1" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="4" fill="rgba(0,0,0,0.1)"/><text x="12" y="13" font-size="10" font-weight="bold" fill="white" text-anchor="middle" font-family="sans-serif">${text}</text></svg>`;
             return new kakao.maps.MarkerImage('data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg), new kakao.maps.Size(35, 45), { offset: new kakao.maps.Point(17, 45) });
         }
 
@@ -685,32 +662,23 @@
             if (!person) return;
             if(selectedMarker) {
                 const prev = allData.find(p => p.marker === selectedMarker);
-                if(prev) {
-                    prev.marker.setImage(prev.originalImage);
-                    prev.marker.setZIndex(1);
-                }
+                if(prev) { prev.marker.setImage(prev.originalImage); prev.marker.setZIndex(1); }
             }
             if (person.marker) {
                 if (!person.checked) {
-                    person.checked = true;
-                    updateMarkerVisibility(person);
-                    updateSelectionSummary();
-                    document.querySelector(`#row-${id} input`).checked = true;
+                    person.checked = true; updateMarkerVisibility(person); updateSelectionSummary();
+                    // 리스트 내 체크박스도 업데이트 (현재 렌더링된 리스트에 있다면)
+                    const cb = document.querySelector(`#row-${id} input`);
+                    if(cb) cb.checked = true;
                 }
                 const highlightImg = createSvgMarker('#FF0000', person.markerText);
-                person.marker.setImage(highlightImg);
-                person.marker.setZIndex(999);
-                selectedMarker = person.marker;
-                map.panTo(person.marker.getPosition());
-            } else {
-                alert("위치 정보가 없는 인원입니다.");
-            }
+                person.marker.setImage(highlightImg); person.marker.setZIndex(999);
+                selectedMarker = person.marker; map.panTo(person.marker.getPosition());
+            } else { alert("위치 정보가 없는 인원입니다."); }
+            
             document.querySelectorAll('.selected-row').forEach(el => el.classList.remove('selected-row'));
             const row = document.getElementById(`row-${id}`);
-            if(row) {
-                row.classList.add('selected-row');
-                row.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }
+            if(row) { row.classList.add('selected-row'); row.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
         }
 
         function resetAll() {
@@ -721,7 +689,8 @@
             document.getElementById('personList').innerHTML = '';
             document.getElementById('totalCount').innerText = '0';
             document.getElementById('selectedCount').innerText = '0';
-            document.getElementById('selectionTags').innerHTML = '';
+            document.getElementById('selectionTags').innerHTML = '<span class="text-gray-400 px-1">없음</span>';
+            populateFilters();
         }
     </script>
 </body>
