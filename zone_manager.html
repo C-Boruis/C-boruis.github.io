@@ -110,7 +110,6 @@
                         <span>조직 통계</span>
                     </div>
                     <div class="flex items-center gap-3">
-                        <!-- [개선] 통계 전체 체크 -->
                         <div class="flex items-center gap-1">
                             <input type="checkbox" id="statsCheckAll" onchange="toggleAll(this.checked)" checked class="rounded text-blue-600 focus:ring-0">
                             <label for="statsCheckAll" class="text-xs font-normal text-gray-500 cursor-pointer">전체표시</label>
@@ -150,7 +149,6 @@
                             <i class="fa-solid fa-magnifying-glass absolute left-2 top-1.5 text-gray-400"></i>
                             <input type="text" id="filterName" onkeyup="applyListFilter()" placeholder="이름 검색" class="w-full border rounded pl-7 pr-2 py-1">
                         </div>
-                        <!-- [개선] 필터된 대상만 일괄 체크 -->
                         <div class="flex items-center gap-1 whitespace-nowrap">
                             <input type="checkbox" id="listCheckAll" onchange="toggleListVisible(this.checked)" checked class="rounded text-blue-600 focus:ring-0">
                             <label for="listCheckAll" class="cursor-pointer text-gray-600">목록선택</label>
@@ -162,7 +160,6 @@
                     <table id="resizeTable" class="w-full text-sm text-left border-collapse table-fixed min-w-[400px]">
                         <thead class="text-xs text-gray-500 uppercase bg-white sticky top-0 z-10 shadow-sm select-none">
                             <tr>
-                                <!-- [개선] 글자 수 기반 자동 조절을 위해 width 제거 후 JS로 제어 -->
                                 <th class="px-2 py-2 border-b w-8 text-center no-print"><i class="fa-solid fa-check text-gray-300"></i></th>
                                 <th class="px-2 py-2 border-b" data-col="parish_zone">교구/구역<div class="resizer no-print"></div></th>
                                 <th class="px-2 py-2 border-b" data-col="name">이름<div class="resizer no-print"></div></th>
@@ -192,7 +189,11 @@
                     <div><label class="block text-gray-600 mb-1">직분</label><input type="text" id="editRole" class="w-full border rounded px-2 py-1.5"></div>
                 </div>
                 <div class="grid grid-cols-2 gap-3">
-                    <div><label class="block text-gray-600 mb-1">교구</label><input type="text" id="editParish" class="w-full border rounded px-2 py-1.5"></div>
+                    <div>
+                        <label class="block text-gray-600 mb-1">교구</label>
+                        <!-- [개선] 동적으로 채워질 select -->
+                        <select id="editParish" class="w-full border rounded px-2 py-1.5 bg-white"></select>
+                    </div>
                     <div><label class="block text-gray-600 mb-1">구역</label><input type="text" id="editZone" class="w-full border rounded px-2 py-1.5"></div>
                 </div>
                 <div><label class="block text-gray-600 mb-1">소속</label><input type="text" id="editGroup" class="w-full border rounded px-2 py-1.5"></div>
@@ -226,12 +227,16 @@
         let stats = {};   
         let selectedMarker = null;
 
-        // [개선] 동적 색상 할당을 위한 변수
+        // [개선] 고정 색상 확장 (5~8교구 추가)
         const FIXED_COLORS = {
             '1교구': { h: 220, s: 90, l: 50 }, // Blue
             '2교구': { h: 0, s: 90, l: 50 },   // Red
             '3교구': { h: 120, s: 90, l: 40 }, // Green
-            '4교구': { h: 45, s: 100, l: 50 }  // Yellow (Darker)
+            '4교구': { h: 45, s: 100, l: 50 }, // Yellow
+            '5교구': { h: 270, s: 90, l: 60 }, // Purple
+            '6교구': { h: 330, s: 90, l: 60 }, // Pink
+            '7교구': { h: 240, s: 100, l: 30 }, // Navy
+            '8교구': { h: 30, s: 100, l: 50 }  // Orange
         };
         let dynamicColors = {};
 
@@ -249,17 +254,15 @@
             });
         };
 
-        // [개선] 교구 색상 가져오기 (고정 4개 + 나머지 자동 생성)
+        // 교구 색상 가져오기
         function getParishColorInfo(parishName) {
-            // 1. 고정 색상 확인
             if (FIXED_COLORS[parishName]) {
                 return FIXED_COLORS[parishName];
             }
-            // 2. 이미 생성된 동적 색상 확인
             if (dynamicColors[parishName]) {
                 return dynamicColors[parishName];
             }
-            // 3. 새로운 색상 생성 (이름 기반 해시로 일관된 색상 유지)
+            // 임의 색상 생성 (이름 기반 해시)
             let hash = 0;
             for (let i = 0; i < parishName.length; i++) {
                 hash = parishName.charCodeAt(i) + ((hash << 5) - hash);
@@ -272,7 +275,6 @@
             return dynamicColors[parishName];
         }
 
-        // 마커 최종 색상 (구역 농도 반영)
         function getMarkerColor(parish, zone) {
             const base = getParishColorInfo(parish);
             let zNum = 1;
@@ -280,14 +282,12 @@
                 const match = zone.match(/\d+/);
                 if (match) zNum = parseInt(match[0]);
             }
-            // 구역 번호가 커질수록 밝기 증가 (최대 90%)
             let lightness = Math.min(90, base.l + (zNum - 1) * 10);
             const hex = hslToHex(base.h, base.s, lightness);
             const baseHex = hslToHex(base.h, base.s, base.l);
             return { hex, baseHex };
         }
 
-        // HSL to Hex 변환 유틸
         function hslToHex(h, s, l) {
             l /= 100;
             const a = s * Math.min(l, 1 - l) / 100;
@@ -303,21 +303,16 @@
         function adjustColumnWidths() {
             const table = document.getElementById('resizeTable');
             const ths = table.querySelectorAll('th[data-col]');
-            
-            // 임시 캔버스 생성 (텍스트 폭 측정용)
             const canvas = document.createElement('canvas');
             const context = canvas.getContext('2d');
-            context.font = "14px 'Noto Sans KR', sans-serif"; // CSS 폰트와 일치
+            context.font = "14px 'Noto Sans KR', sans-serif"; 
 
             ths.forEach(th => {
                 const colKey = th.getAttribute('data-col');
-                let maxWidth = 50; // 최소 너비
-                
-                // 헤더 텍스트 측정
+                let maxWidth = 50; 
                 const headerWidth = context.measureText(th.innerText).width + 20;
                 maxWidth = Math.max(maxWidth, headerWidth);
 
-                // 데이터 텍스트 측정 (최대 50개 샘플만 확인하여 성능 최적화)
                 const sampleData = allData.slice(0, 50);
                 sampleData.forEach(p => {
                     let text = '';
@@ -325,12 +320,10 @@
                     else if (colKey === 'name') text = p.name;
                     else if (colKey === 'role') text = p.role;
                     else if (colKey === 'address') text = p.address || '주소 없음';
-                    
-                    const width = context.measureText(text).width + 24; // 패딩 고려
+                    const width = context.measureText(text).width + 24; 
                     maxWidth = Math.max(maxWidth, width);
                 });
 
-                // 최대 너비 제한 (너무 넓어지지 않게)
                 if (colKey === 'address') maxWidth = Math.min(maxWidth, 400);
                 else maxWidth = Math.min(maxWidth, 150);
 
@@ -338,7 +331,6 @@
             });
         }
 
-        // --- 기존 기능들 유지 ---
         function populateFilters() {
             const parishSelect = document.getElementById('filterParish');
             const zoneSelect = document.getElementById('filterZone');
@@ -377,7 +369,6 @@
 
             renderPersonList(filtered);
             
-            // 목록 체크박스 상태 동기화
             const listCheckAll = document.getElementById('listCheckAll');
             const allVisibleChecked = filtered.length > 0 && filtered.every(p => p.checked);
             listCheckAll.checked = allVisibleChecked;
@@ -400,10 +391,27 @@
         function openEditModal(id) {
             const person = allData.find(p => p.id === id);
             if(!person) return;
+
+            // [개선] 수정 모달 열 때 교구 목록 동적 생성
+            const parishSelect = document.getElementById('editParish');
+            parishSelect.innerHTML = '';
+            const parishes = [...new Set(allData.map(p => p.parish))].sort();
+            parishes.forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = p; opt.innerText = p;
+                parishSelect.appendChild(opt);
+            });
+            // 만약 현재 사람의 교구가 목록에 없으면 추가
+            if (!parishes.includes(person.parish)) {
+                const opt = document.createElement('option');
+                opt.value = person.parish; opt.innerText = person.parish;
+                parishSelect.appendChild(opt);
+            }
+
             document.getElementById('editId').value = person.id;
             document.getElementById('editName').value = person.name;
             document.getElementById('editRole').value = person.role;
-            document.getElementById('editParish').value = person.parish;
+            parishSelect.value = person.parish;
             document.getElementById('editZone').value = person.zone;
             document.getElementById('editGroup').value = person.group;
             document.getElementById('editAddress').value = person.address;
@@ -540,7 +548,7 @@
             
             allData.forEach(d => { if(d.marker) d.marker.setMap(null); });
             allData = [];
-            dynamicColors = {}; // 색상 캐시 초기화
+            dynamicColors = {}; 
             
             let tempValid = [], tempInvalid = [];
 
@@ -566,7 +574,7 @@
                             if (status === kakao.maps.services.Status.OK) {
                                 const lat = parseFloat(result[0].y);
                                 const lng = parseFloat(result[0].x);
-                                const colorInfo = getMarkerColor(parish, zone); // [개선] 동적 색상 적용
+                                const colorInfo = getMarkerColor(parish, zone);
                                 const markerImg = createSvgMarker(colorInfo.hex, person.markerText);
 
                                 person.marker = new kakao.maps.Marker({
@@ -597,7 +605,7 @@
             
             populateFilters();
             updateStatsAndUI();
-            adjustColumnWidths(); // [신규] 컬럼 너비 자동 조정
+            adjustColumnWidths(); 
             
             if (tempValid.length > 0) {
                 const bounds = new kakao.maps.LatLngBounds();
@@ -626,15 +634,18 @@
             container.innerHTML = '';
             Object.keys(stats).sort().forEach(parish => {
                 const pData = stats[parish];
-                const colorInfo = getParishColorInfo(parish); // 동적 색상 가져오기
+                const colorInfo = getParishColorInfo(parish);
                 const baseHex = hslToHex(colorInfo.h, colorInfo.s, colorInfo.l);
                 
+                // 교구 전체 체크 여부 확인
+                const isParishChecked = allData.filter(p => p.parish === parish).every(p => p.checked);
+
                 const parishDiv = document.createElement('div');
                 parishDiv.className = "border rounded bg-white overflow-hidden shadow-sm text-sm";
                 parishDiv.innerHTML = `
                     <div class="flex items-center justify-between p-2 bg-gray-50 border-b cursor-pointer hover:bg-gray-100">
                         <div class="flex items-center gap-2">
-                            <input type="checkbox" checked onchange="toggleGroup('parish', '${parish}', this.checked)" class="rounded text-blue-600 focus:ring-0">
+                            <input type="checkbox" ${isParishChecked ? 'checked' : ''} onchange="toggleGroup('parish', '${parish}', this.checked)" class="rounded text-blue-600 focus:ring-0">
                             <span class="w-3 h-3 rounded-full shadow-sm" style="background-color: ${baseHex}"></span>
                             <span class="font-bold text-gray-800">${parish}</span>
                         </div>
@@ -645,11 +656,15 @@
                 zonesDiv.className = "divide-y divide-gray-100";
                 Object.keys(pData.zones).sort().forEach(zone => {
                     const zData = pData.zones[zone];
+                    // 구역 전체 체크 여부
+                    const isZoneChecked = allData.filter(p => p.parish === parish && p.zone === zone).every(p => p.checked);
+
                     let groupsHtml = '';
                     Object.keys(zData.groups).sort().forEach(group => {
+                        const isGroupChecked = allData.filter(p => p.parish === parish && p.zone === zone && p.group === group).every(p => p.checked);
                         groupsHtml += `
                             <div class="flex items-center gap-1 bg-gray-50 px-1.5 py-0.5 rounded border text-[11px] text-gray-600 whitespace-nowrap">
-                                <input type="checkbox" checked onchange="toggleGroup('group', '${parish}|${zone}|${group}', this.checked)" class="w-3 h-3 rounded text-blue-600">
+                                <input type="checkbox" ${isGroupChecked ? 'checked' : ''} onchange="toggleGroup('group', '${parish}|${zone}|${group}', this.checked)" class="w-3 h-3 rounded text-blue-600">
                                 <span>${group} ${zData.groups[group]}</span>
                             </div>
                         `;
@@ -657,7 +672,7 @@
                     zonesDiv.innerHTML += `
                         <div class="p-2 pl-4">
                             <div class="flex items-center gap-2 mb-1">
-                                <input type="checkbox" checked onchange="toggleGroup('zone', '${parish}|${zone}', this.checked)" class="rounded text-blue-600 focus:ring-0">
+                                <input type="checkbox" ${isZoneChecked ? 'checked' : ''} onchange="toggleGroup('zone', '${parish}|${zone}', this.checked)" class="rounded text-blue-600 focus:ring-0">
                                 <span class="font-semibold text-gray-700 text-xs">└ ${zone}</span>
                                 <span class="text-[10px] text-gray-400">(${zData.total}명)</span>
                             </div>
@@ -670,7 +685,7 @@
             });
         }
 
-        // [개선] 그룹 체크박스 로직
+        // [개선] 그룹 체크박스 로직 (상하위 연동)
         function toggleGroup(level, key, isChecked) {
             allData.forEach(p => {
                 let match = false;
@@ -679,27 +694,32 @@
                 else if (level === 'group') { const [pa, zo, gr] = key.split('|'); if (p.parish === pa && p.zone === zo && p.group === gr) match = true; }
                 if (match) { p.checked = isChecked; updateMarkerVisibility(p); }
             });
+            // 데이터 상태가 바뀌었으므로 통계 트리(체크박스 상태)를 다시 그림
+            renderStatsTree();
             applyListFilter(); 
             updateSelectionSummary();
         }
 
         function togglePerson(id, isChecked) {
             const person = allData.find(p => p.id === id);
-            if (person) { person.checked = isChecked; updateMarkerVisibility(person); updateSelectionSummary(); }
+            if (person) { 
+                person.checked = isChecked; 
+                updateMarkerVisibility(person); 
+                updateSelectionSummary();
+                // 개별 선택 시 상위 그룹 체크 상태도 변할 수 있으므로 트리 갱신
+                renderStatsTree();
+            }
         }
 
-        // 전체/필터된 목록 일괄 체크
         function toggleAll(isChecked) {
             allData.forEach(p => { p.checked = isChecked; updateMarkerVisibility(p); });
-            // 모든 체크박스 UI 업데이트
             document.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = isChecked);
             applyListFilter();
             updateSelectionSummary();
+            renderStatsTree();
         }
 
-        // [신규] 필터된 리스트만 체크/해제
         function toggleListVisible(isChecked) {
-            // 현재 필터 조건 가져오기
             const pFilter = document.getElementById('filterParish').value;
             const zFilter = document.getElementById('filterZone').value;
             const nFilter = document.getElementById('filterName').value.toLowerCase();
@@ -714,7 +734,8 @@
                     updateMarkerVisibility(p);
                 }
             });
-            applyListFilter(); // 리스트 갱신
+            renderStatsTree();
+            applyListFilter();
             updateSelectionSummary();
         }
 
@@ -791,10 +812,12 @@
             if (person.marker) {
                 if (!person.checked) {
                     person.checked = true; updateMarkerVisibility(person); updateSelectionSummary();
+                    renderStatsTree();
                     const cb = document.querySelector(`#row-${id} input`);
                     if(cb) cb.checked = true;
                 }
-                const highlightImg = createSvgMarker('#FF0000', person.markerText);
+                // [개선] 선택 마커 검은색으로 변경
+                const highlightImg = createSvgMarker('#000000', person.markerText);
                 person.marker.setImage(highlightImg); person.marker.setZIndex(999);
                 selectedMarker = person.marker; map.panTo(person.marker.getPosition());
             } else { alert("위치 정보가 없는 인원입니다."); }
