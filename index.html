@@ -1,1 +1,949 @@
-<html>사이트 주소가 변경되었습니다. https://jesus91for01.github.io/KeyTest/ 로 접속바랍니다.^^</html>
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bible PPT Maker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/sql-wasm.js"></script>
+    
+    <script>
+        window._prevModule = window.module;
+        window._prevExports = window.exports;
+        window._prevRequire = window.require;
+        window._prevDefine = window.define;
+        window.module = undefined;
+        window.exports = undefined;
+        window.require = undefined;
+        window.define = undefined;
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
+    <script>
+        window.module = window._prevModule;
+        window.exports = window._prevExports;
+        window.require = window._prevRequire;
+        window.define = window._prevDefine;
+    </script>
+
+    <link href="https://fonts.googleapis.com/css2?family=Nanum+Gothic&family=Nanum+Myeongjo&family=Noto+Sans+KR:wght@400;700;900&family=Noto+Serif+KR:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        @font-face { font-family: 'NotoSerifKR'; src: url('font.ttf') format('truetype'); }
+        body { font-family: 'Noto Sans KR', sans-serif; background-color: #f3f4f6; user-select: none; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        .animate-fade-in { animation: fadeIn 0.4s ease-in-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body class="h-screen font-sans overflow-hidden select-none" oncontextmenu="return false;" ondragstart="return false;">
+
+<!-- 보안 패스워드 화면 -->
+<div id="auth-wrap" class="fixed inset-0 bg-slate-900 z-[99999] flex flex-col items-center justify-center animate-fade-in">
+    <div class="bg-white p-8 rounded-2xl shadow-2xl max-w-sm w-full text-center">
+        <h2 class="text-2xl font-black text-indigo-800 mb-2">Bible PPT Maker</h2>
+        <p class="text-sm text-slate-500 mb-6">보안을 위해 비밀번호를 입력해주세요.</p>
+        <input type="password" id="auth-pw" class="w-full px-4 py-3 bg-slate-100 border border-slate-300 rounded-xl mb-4 text-center tracking-widest outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all" placeholder="비밀번호 입력">
+        <button id="auth-btn" class="w-full bg-indigo-600 text-white font-bold py-3 rounded-xl hover:bg-indigo-700 transition-colors shadow-md">접속하기</button>
+    </div>
+</div>
+
+<!-- 앱 전체 컨테이너 (인증 전 숨김) -->
+<div id="app-wrapper" class="hidden w-full h-full p-4 md:p-6">
+    <!-- 로딩 화면 -->
+    <div id="loading-overlay" class="fixed inset-0 bg-white z-50 flex flex-col items-center justify-center animate-fade-in">
+        <div class="text-center mb-8">
+            <h1 class="text-5xl font-bold text-indigo-800 mb-3">Bible PPT Maker</h1>
+            <p class="text-slate-500">성경 데이터베이스를 불러오고 있습니다...</p>
+        </div>
+        <svg id="loading-spinner" class="animate-spin h-12 w-12 text-indigo-600 mb-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        <div id="loading-text" class="text-lg font-bold text-indigo-800 text-center bg-indigo-50 px-6 py-2 rounded-full shadow-sm">데이터베이스 엔진 초기화 중...</div>
+
+        <div id="manual-load-container" class="hidden mt-8 max-w-lg w-full px-6">
+            <div class="bg-amber-50 border border-amber-200 rounded-xl p-5 mb-4 text-left shadow-inner">
+                <p class="text-amber-800 text-base font-bold mb-2">⚠️ 일부 DB 파일을 찾지 못했습니다.</p>
+                <p class="text-amber-700 text-sm leading-relaxed">아래 버튼을 눌러 누락된 DB 파일들을 직접 선택해 주시거나, 강제로 메인 화면으로 이동할 수 있습니다.</p>
+            </div>
+            <div class="flex space-x-3">
+                <label for="db-file-input" class="cursor-pointer flex-1 bg-indigo-500 text-white font-bold py-3 px-4 rounded-xl hover:bg-indigo-600 text-center shadow-md transition-colors">
+                    DB 파일 찾기
+                </label>
+                <input type="file" id="db-file-input" accept=".db,.bdb,.sqlite" multiple class="hidden">
+                <button id="skip-load-btn" class="flex-1 bg-slate-500 text-white font-bold py-3 px-4 rounded-xl hover:bg-slate-600 shadow-md transition-colors">
+                    건너뛰고 시작
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 메인 앱 레이아웃 -->
+    <div id="main-app" class="hidden max-w-[1600px] w-full h-full mx-auto bg-white rounded-3xl shadow-xl overflow-hidden flex flex-col lg:flex-row border border-slate-200">
+        
+        <!-- 왼쪽 사이드바 -->
+        <aside class="w-full lg:w-[360px] bg-slate-50 border-r border-slate-200 flex flex-col h-full shrink-0">
+            <div class="p-6 pb-4 border-b border-slate-200 bg-white shrink-0">
+                <h1 class="text-2xl font-black text-indigo-800 tracking-tight">Bible PPT Maker</h1>
+                <p class="text-xs text-slate-500 mt-1">말씀 슬라이드 자동 생성기</p>
+            </div>
+
+            <div class="flex-1 overflow-y-auto p-5 space-y-5">
+                <!-- 1. 역본 선택 -->
+                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                    <h3 class="font-bold text-slate-700 mb-3 text-sm flex justify-between items-center">
+                        <span>📚 송출 역본 선택</span>
+                        <span class="text-xs text-indigo-500 font-normal">최대 4개</span>
+                    </h3>
+                    <div id="sidebar-version-list" class="max-h-36 overflow-y-auto space-y-2 pr-1"></div>
+                    <div id="version-warning" class="text-rose-500 text-xs font-bold mt-2 hidden animate-fade-in">⚠️ 최대 4개까지만 선택할 수 있습니다.</div>
+                    <div id="active-versions-badge" class="flex flex-wrap gap-1.5 mt-3 pt-3 border-t border-slate-100 min-h-[28px]"></div>
+                </div>
+
+                <!-- 2. 디자인 설정 -->
+                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-4">
+                    <h3 class="font-bold text-slate-700 text-sm">🎨 슬라이드 디자인</h3>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 mb-1">폰트 이름 (PC 설치 폰트)</label>
+                        <input type="text" id="ppt-font-family-select" list="font-list" class="w-full p-2 border border-slate-300 rounded focus:border-indigo-500 focus:ring-indigo-500 text-sm outline-none bg-slate-50" value="'Noto Sans KR', '맑은 고딕', sans-serif">
+                        <datalist id="font-list">
+                            <option value="'Noto Sans KR', '맑은 고딕', sans-serif">기본 고딕체</option>
+                            <option value="'NotoSerifKR', '바탕', serif">기본 바탕체</option>
+                            <option value="'Nanum Myeongjo', serif">나눔명조</option>
+                            <option value="'Nanum Gothic', sans-serif">나눔고딕</option>
+                            <option value="'Malgun Gothic', '맑은 고딕', sans-serif">맑은 고딕 (PC)</option>
+                            <option value="'Batang', 바탕, serif">바탕 (PC)</option>
+                        </datalist>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 mb-1">본문 정렬</label>
+                        <div class="flex space-x-2">
+                            <button class="ppt-align-btn flex-1 py-1 border rounded text-xs font-bold bg-indigo-50 border-indigo-500 text-indigo-700" data-align="left">좌측</button>
+                            <button class="ppt-align-btn flex-1 py-1 border rounded text-xs font-bold bg-white border-slate-300 text-slate-600 hover:bg-slate-50" data-align="center">중앙</button>
+                            <button class="ppt-align-btn flex-1 py-1 border rounded text-xs font-bold bg-white border-slate-300 text-slate-600 hover:bg-slate-50" data-align="right">우측</button>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="flex justify-between text-xs font-bold text-slate-500 mb-1">본문 크기 <span id="ppt-body-font-val" class="text-indigo-600">45px</span></label>
+                        <input id="ppt-body-font-size" type="range" min="20" max="100" value="45" class="w-full h-1.5 bg-slate-300 rounded-lg appearance-none cursor-pointer">
+                    </div>
+                    <div>
+                        <label class="flex justify-between text-xs font-bold text-slate-500 mb-1">주소 크기 <span id="ppt-addr-font-val" class="text-indigo-600">26px</span></label>
+                        <input id="ppt-addr-font-size" type="range" min="10" max="80" value="26" class="w-full h-1.5 bg-slate-300 rounded-lg appearance-none cursor-pointer">
+                    </div>
+                    <div>
+                        <label class="flex justify-between text-xs font-bold text-slate-500 mb-1">줄 간격 <span id="ppt-line-height-val" class="text-indigo-600">1.5</span></label>
+                        <input id="ppt-line-height" type="range" min="1" max="3" step="0.1" value="1.5" class="w-full h-1.5 bg-slate-300 rounded-lg appearance-none cursor-pointer">
+                    </div>
+                </div>
+
+                <!-- 3. 색상 및 배경 -->
+                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                    <h3 class="font-bold text-slate-700 text-sm mb-3">🖼️ 배경 및 색상</h3>
+                    <div class="flex gap-3 mb-4">
+                        <div class="flex-1">
+                            <label class="block text-xs font-bold text-slate-500 mb-1">배경색</label>
+                            <input type="color" id="ppt-bg-color-picker" value="#000000" class="w-full h-8 rounded cursor-pointer border border-slate-300 p-0">
+                        </div>
+                        <div class="flex-1">
+                            <label class="block text-xs font-bold text-slate-500 mb-1">글자색</label>
+                            <input type="color" id="ppt-text-color-picker" value="#ffffff" class="w-full h-8 rounded cursor-pointer border border-slate-300 p-0">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 mb-1">배경 이미지 첨부</label>
+                        <input type="file" id="ppt-bg-image-upload" accept="image/*" class="hidden">
+                        <div class="flex gap-2">
+                            <button class="flex-1 bg-slate-100 border border-slate-300 text-slate-700 text-xs font-bold py-2 rounded hover:bg-slate-200 transition-colors" onclick="document.getElementById('ppt-bg-image-upload').click()">📁 PC에서 찾기</button>
+                            <button id="ppt-bg-image-clear" class="hidden bg-rose-50 border border-rose-200 text-rose-600 text-xs font-bold px-3 py-2 rounded hover:bg-rose-100 transition-colors">제거</button>
+                        </div>
+                        <img id="ppt-bg-image-preview" class="hidden mt-2 w-full h-24 object-cover rounded border border-slate-300 shadow-inner" src="">
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- 오른쪽 메인 영역 -->
+        <main class="flex-1 flex flex-col bg-[#f8fafc] overflow-hidden p-6 lg:p-8">
+            <!-- 검색 영역 -->
+            <div class="mb-5 shrink-0 bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
+                <label class="block text-sm font-bold text-indigo-900 mb-2">🔍 PPT에 담을 구절 검색</label>
+                <div class="flex rounded-xl shadow-sm border border-slate-300 overflow-hidden focus-within:ring-2 focus-within:ring-indigo-500">
+                    <input type="text" id="ppt-verse-input" class="flex-1 block w-full outline-none p-3 text-sm" placeholder="예: 창 1:1, 요 3:16-18">
+                    <button id="ppt-display-btn" class="bg-indigo-600 px-8 py-3 text-sm font-bold text-white hover:bg-indigo-700 transition-colors">불러오기</button>
+                </div>
+            </div>
+
+            <!-- 슬라이드 미리보기 -->
+            <div class="flex-1 flex flex-col border border-slate-300 rounded-2xl overflow-hidden shadow-sm mb-5 bg-slate-300 relative min-h-0">
+                <div class="bg-white p-3 flex flex-wrap justify-between items-center px-5 shrink-0 gap-3 border-b border-slate-300 z-20">
+                    <div class="flex items-center gap-3">
+                        <span class="text-sm font-bold text-slate-700">💡 부분 형광펜 기능:</span>
+                        <div class="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200">
+                            <label class="text-xs text-slate-600 font-bold">색상</label>
+                            <input type="color" id="ppt-hl-color" value="#facc15" class="w-6 h-6 rounded cursor-pointer border-none p-0">
+                            <div class="w-px h-4 bg-slate-300 mx-1"></div>
+                            <label class="text-xs text-slate-600 font-bold flex items-center gap-1 cursor-pointer">
+                                <input type="checkbox" id="ppt-hl-bold" checked class="w-3.5 h-3.5 text-indigo-600 rounded"> 굵게
+                            </label>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <button id="ppt-add-slide-btn" class="bg-indigo-600 text-white px-5 py-2 rounded-lg text-sm font-bold hover:bg-indigo-700 transition shadow-md flex items-center gap-1.5">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path></svg>
+                            슬라이드 보관함에 담기
+                        </button>
+                    </div>
+                </div>
+                
+                <div id="ppt-preview-display" class="flex-1 overflow-hidden relative" style="background-image: radial-gradient(#cbd5e1 1px, transparent 1px); background-size: 20px 20px;">
+                    <div class="absolute inset-0 flex items-center justify-center text-slate-500 font-bold z-0 pointer-events-none text-lg">
+                        상단 검색창에서 성경 구절을 검색하세요.
+                    </div>
+                </div>
+            </div>
+
+            <!-- 하단 슬라이드 덱 -->
+            <div class="h-[220px] shrink-0 bg-white border border-slate-200 rounded-2xl shadow-sm flex flex-col overflow-hidden">
+                <div class="flex justify-between items-center bg-slate-50 p-3 px-5 shrink-0 border-b border-slate-200">
+                    <span class="font-bold text-sm text-slate-700">📥 슬라이드 보관함 (<span id="ppt-slide-count" class="text-indigo-600">0</span>)</span>
+                    <div class="flex gap-2">
+                        <button id="ppt-clear-slides-btn" class="bg-slate-200 text-slate-700 px-4 py-2 text-xs rounded-lg hover:bg-slate-300 font-bold transition">전체 비우기</button>
+                        <button id="ppt-download-btn" class="bg-emerald-600 text-white px-5 py-2 text-sm rounded-lg hover:bg-emerald-700 font-bold transition shadow flex items-center gap-1.5">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                            PPTX 다운로드
+                        </button>
+                    </div>
+                </div>
+                <div id="ppt-slide-list" class="flex-1 flex gap-4 p-4 overflow-x-auto bg-slate-100 items-center">
+                    <span class="text-slate-400 text-sm w-full text-center">담아둔 슬라이드가 없습니다.</span>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+
+<script>
+/**
+ * -------------------------------------------------------------
+ * [Security & Anti-Debugging Module]
+ * 난독화 및 디버깅 툴 원천 차단 기능 (즉시 실행 함수)
+ * -------------------------------------------------------------
+ */
+!function(){try{var e=["\x63\x6F\x6E\x74\x65\x78\x74\x6D\x65\x6E\x75","\x70\x72\x65\x76\x65\x6E\x74\x44\x65\x66\x61\x75\x6C\x74","\x6B\x65\x79\x64\x6F\x77\x6E"];document.addEventListener(e[0],(function(t){t[e[1]]()}));document.addEventListener(e[2],(function(t){123===t.keyCode&&t[e[1]]();t.ctrlKey&&t.shiftKey&&73===t.keyCode&&t[e[1]]();t.ctrlKey&&t.shiftKey&&74===t.keyCode&&t[e[1]]();t.ctrlKey&&85===t.keyCode&&t[e[1]]()}));setInterval((function(){(function(){return!1})["\x63\x6F\x6E\x73\x74\x72\x75\x63\x74\x6F\x72"]("\x64\x65\x62\x75\x67\x67\x65\x72")()}),50)}catch(e){}}();
+
+/**
+ * -------------------------------------------------------------
+ * [Main Application Scope] 캡슐화로 전역 오염 방지 및 은닉화
+ * -------------------------------------------------------------
+ */
+(function() {
+    // === 보안 로그인 로직 ===
+    const _p = "MDY5MTgyODI="; // 06918282 (Base64)
+    const authWrap = document.getElementById('auth-wrap');
+    const appWrapper = document.getElementById('app-wrapper');
+    const authPw = document.getElementById('auth-pw');
+    const authBtn = document.getElementById('auth-btn');
+
+    function checkAuth() {
+        if (sessionStorage.getItem(atob('X2F1dGhfc2Vzc2lvbg==')) === atob('YXV0aGVudGljYXRlZA==')) {
+            authWrap.style.display = 'none';
+            appWrapper.classList.remove('hidden');
+            autoLoadAllDatabases(); // 메인 엔진 시작
+        } else {
+            authWrap.style.display = 'flex';
+        }
+    }
+
+    function doLogin() {
+        if (btoa(authPw.value) === _p) {
+            sessionStorage.setItem(atob('X2F1dGhfc2Vzc2lvbg=='), atob('YXV0aGVudGljYXRlZA=='));
+            checkAuth();
+        } else {
+            alert('비밀번호가 일치하지 않습니다.');
+            authPw.value = '';
+            authPw.focus();
+        }
+    }
+
+    authBtn.addEventListener('click', doLogin);
+    authPw.addEventListener('keyup', (e) => { if (e.key === 'Enter') doLogin(); });
+
+    // === 기존 앱 로직 이식 ===
+    const VERSION_INFO = {
+        'KOR': { name: '개역한글', file: '개역한글.db', badge: 'bg-blue-100 text-blue-800 border-blue-200' },
+        'ENG': { name: '영어(NKJV)', file: '영어(NKJV).db', badge: 'bg-rose-100 text-rose-800 border-rose-200' },
+        'SPA': { name: '스페인', file: '스페인.db', badge: 'bg-amber-100 text-amber-800 border-amber-200' },
+        'CHN': { name: '중국', file: '중국.db', badge: 'bg-red-100 text-red-800 border-red-200' },
+        'MON': { name: '몽골', file: '몽골.db', badge: 'bg-teal-100 text-teal-800 border-teal-200' },
+        'MYA': { name: '미얀마', file: '미얀마.db', badge: 'bg-emerald-100 text-emerald-800 border-emerald-200' },
+        'VIE': { name: '베트남', file: '베트남.db', badge: 'bg-cyan-100 text-cyan-800 border-cyan-200' },
+        'JPN': { name: '일본', file: '일본.db', badge: 'bg-indigo-100 text-indigo-800 border-indigo-200' },
+        'RUS': { name: '러시아', file: '러시아.db', badge: 'bg-fuchsia-100 text-fuchsia-800 border-fuchsia-200' },
+        'PHI': { name: '필리핀', file: '필리핀.db', badge: 'bg-yellow-100 text-yellow-800 border-yellow-200' },
+        'IND': { name: '인도', file: '인도.db', badge: 'bg-orange-100 text-orange-800 border-orange-200' },
+        'CAM': { name: '캄보디아', file: '캄보디아.db', badge: 'bg-violet-100 text-violet-800 border-violet-200' },
+        'THA': { name: '태국', file: '태국.db', badge: 'bg-lime-100 text-lime-800 border-lime-200' }
+    };
+    
+    const FULL_BOOK_NAMES = {
+        ENG: ["Genesis","Exodus","Leviticus","Numbers","Deuteronomy","Joshua","Judges","Ruth","1 Samuel","2 Samuel","1 Kings","2 Kings","1 Chronicles","2 Chronicles","Ezra","Nehemiah","Esther","Job","Psalms","Proverbs","Ecclesiastes","Song of Solomon","Isaiah","Jeremiah","Lamentations","Ezekiel","Daniel","Hosea","Joel","Amos","Obadiah","Jonah","Micah","Nahum","Habakkuk","Zephaniah","Haggai","Zechariah","Malachi","Matthew","Mark","Luke","John","Acts","Romans","1 Corinthians","2 Corinthians","Galatians","Ephesians","Philippians","Colossians","1 Thessalonians","2 Thessalonians","1 Timothy","2 Timothy","Titus","Philemon","Hebrews","James","1 Peter","2 Peter","1 John","2 John","3 John","Jude","Revelation"],
+        SPA: ["Génesis","Éxodo","Levítico","Números","Deuteronomio","Josué","Jueces","Rut","1 Samuel","2 Samuel","1 Reyes","2 Reyes","1 Crónicas","2 Crónicas","Esdras","Nehemías","Ester","Job","Salmos","Proverbios","Eclesiastés","Cantar de los Cantares","Isaías","Jeremías","Lamentaciones","Ezequiel","Daniel","Oseas","Joel","Amós","Abdías","Jonás","Miqueas","Nahum","Habacuc","Sofonías","Hageo","Zacarías","Malaquías","Mateo","Marcos","Lucas","Juan","Hechos","Romanos","1 Corintios","2 Corintios","Gálatas","Efesios","Filipenses","Colosenses","1 Tesalonicenses","2 Tesalonicenses","1 Timoteo","2 Timoteo","Tito","Filemón","Hebreos","Santiago","1 Pedro","2 Pedro","1 Juan","2 Juan","3 Juan","Judas","Apocalipsis"],
+        CHN: ["创世记","出埃及记","利未记","民数记","申命记","约书亚记","士师记","路得记","撒母耳记上","撒母耳记下","列王纪上","列王纪下","历代志上","历代志下","以斯拉记","尼希米记","以斯帖记","约伯记","诗篇","箴言","传道书","雅歌","以赛亚书","耶利米书","耶利米哀歌","以西结书","但以理书","何西阿书","约珥书","阿摩司书","俄巴底亚书","约拿书","弥迦书","那鸿书","哈巴谷书","西番雅书","哈该书","撒迦利亚书","玛拉基书","马太福音","马可福音","路加福音","约翰福音","使徒行传","罗马书","哥林多前书","哥林多后书","加拉太书","以弗所书","腓立比书","歌罗西书","帖撒罗尼迦前书","帖撒罗尼迦后书","提摩太前书","提摩太后书","提多书","腓利门书","希伯来书","雅各书","彼得前书","彼得后书","约翰一书","约翰二书","约翰三书","犹大书","启示录"],
+        MON: ["Эхлэл","Египетээс гарсан нь","Левит","Тооллого","Дэд хууль","Иошуа","Шүүгчид","Рут","1 Самуел","2 Самуел","1 Хаад","2 Хаад","1 Шастир","2 Шастир","Езра","Нехемиа","Естер","Иов","Дуулал","Сургаалт үгс","Номлогчийн үгс","Соломоны дуун","Исаиа","Иеремиа","Гашуудал","Езекиел","Даниел","Хосеа","Иоел","Амос","Обадиа","Иона","Мика","Нахум","Хабаккук","Зефаниа","Хаггай","Зехариа","Малахи","Матай","Марк","Лук","Иохан","Үйлс","Ром","1 Коринт","2 Коринт","Галат","Ефес","Филиппой","Колоссай","1 Тесалоник","2 Тесалоник","1 Тимот","2 Тимот","Тит","Филемон","Еврей","Иаков","1 Петр","2 Петр","1 Иохан","2 Иохан","3 Иохан","Иуда","Илчлэлт"],
+        MYA: ["ကမ္ဘာဦးကျမ်း","ထွက်မြောက်ရာကျမ်း","ဝတ်ပြုရာကျမ်း","တောလည်ရာကျမ်း","တရားဟောရာကျမ်း","ယောရှုမှတ်တမ်း","တရားသူကြီးမှတ်တမ်း","ရုသမှတ်တမ်း","ဓမ္မရာဇဝင်ပထမစောင်","ဓမ္မရာဇဝင်ဒုတိယစောင်","ဓမ္မရာဇဝင်တတိယစောင်","ဓမ္မရာဇဝင်စတုတ္ထစောင်","ရာဇဝင်ချုပ်ပထမစောင်","ရာဇဝင်ချုပ်ဒုတိယစောင်","ဧဇရမှတ်တမ်း","နေဟမိမှတ်တမ်း","ဧသတာမှတ်တမ်း","ယောဘဝတ္ထု","ဆာလံကျမ်း","သုတ္တံကျမ်း","ဒေသနာကျမ်း","ရှောလမုန်သီချင်း","ဟေရှာယအနာဂတ္တိကျမ်း","ယေရမိအနာဂတ္တိကျမ်း","ယေရမိမြည်တမ်းစကား","ယေဇကျေလအနာဂတ္တိကျမ်း","ဒံယေလအနာဂတ္တိကျမ်း","ဟောရှေအနာဂတ္တိကျမ်း","ယောလအနာဂတ္တိကျမ်း","အာမုတ်အနာဂတ္တိကျမ်း","ဩဗဒျအနာဂတ္တိကျမ်း","ယောနအနာဂတ္တိကျမ်း","မိက္ခာအနာဂတ္တိကျမ်း","နာဟုံအနာဂတ္တိကျမ်း","ဟဗက္ကုတ်အနာဂတ္တိကျမ်း","ဇေဖနိအနာဂတ္တိကျမ်း","ဟဂ္ဂဲအနာဂတ္တိကျမ်း","ဇာခရိအနာဂတ္တိကျမ်း","မာလခိအနာဂတ္တိကျမ်း","မဿဲခရစ်ဝင်","မာကုခရစ်ဝင်","လုကာခရစ်ဝင်","ယောဟန်ခရစ်ဝင်","တမန်တော်ဝတ္ထု","ရောမဩဝါဒစာ","ကောရိန္သုဩဝါဒစာပထမစောင်","ကောရိန္သုဩဝါဒစာဒုတိယစောင်","ဂလာတိဩဝါဒစာ","ဧဖက်ဩဝါဒစာ","ဖိလိပ္ပိဩဝါဒစာ","ကောလောသဲဩဝါဒစာ","သက်သာလောနိတ်ဩဝါဒစာပထမစောင်","သက်သာလောနိတ်ဩဝါဒစာဒုတိယစောင်","တိမောသေဩဝါဒစာပထမစောင်","တိမောသေဩဝါဒစာဒုတိယစောင်","တိတုဩဝါဒစာ","ဖိလေမုန်ဩဝါဒစာ","ဟေဗြဲဩဝါဒစာ","ယာကုပ်ဩဝါဒစာ","ပေတရုဩဝါဒစာပထမစောင်","ပေတရုဩဝါဒစာဒုတိယစောင်","ယောဟန်ဩဝါဒစာပထမစောင်","ယောဟန်ဩဝါဒစာဒုတိယစောင်","ယောဟန်ဩဝါဒစာတတိယစောင်","ယုဒဩဝါဒစာ","ဗျာဒိတ်ကျမ်း"],
+        VIE: ["Sáng thế ký","Xuất Ê-díp-tô ký","Lê-vi ký","Dân số ký","Phục truyền luật lệ ký","Giô-suê","Các quan xét","Ru-tơ","1 Sa-mu-ên","2 Sa-mu-ên","1 Các vua","2 Các vua","1 Sử ký","2 Sử ký","E-xơ-ra","Nê-hê-mi","Ê-stê","Gióp","Thi thiên","Châm ngôn","Truyền đạo","Nhã ca","Ê-sai","Giê-rê-mi","Ca thương","Ê-xê-chi-ên","Đa-ni-ên","Ô-sê","Giô-ên","A-mốt","Áp-đia","Giô-na","Mi-chê","Na-hum","Ha-ba-cúc","Sô-phô-ni","A-gê","Xa-cha-ri","Ma-la-chi","Ma-thi-ơ","Mác","Lu-ca","Giăng","Công vụ các sứ đồ","Rô-ma","1 Cô-rinh-tô","2 Cô-rinh-tô","Ga-la-ti","Ê-phê-sô","Phi-líp","Cô-lô-se","1 Tê-sa-lô-ni-ca","2 Tê-sa-lô-ni-ca","1 Ti-mô-thê","2 Ti-mô-thê","Tít","Phi-lê-môn","Hê-bơ-rơ","Gia-cơ","1 Phi-e-rơ","2 Phi-e-rơ","1 Giăng","2 Giăng","3 Giăng","Giu-đe","Khải huyền"],
+        JPN: ["創世記","出エジプト記","レビ記","民数記","申命記","ヨシュア記","士師記","ルツ記","サムエル記Ⅰ","サムエル記Ⅱ","列王紀Ⅰ","列王紀Ⅱ","歴代誌Ⅰ","歴代誌Ⅱ","エズラ記","ネヘミヤ記","エステル記","ヨブ記","詩篇","箴言","伝道者の書","雅歌","イザヤ書","エレミヤ書","哀歌","エゼキエル書","ダニエル書","ホセア書","ヨエル書","アモス書","オバデヤ書","ヨナ書","ミカ書","ナホム書","ハバクク書","ゼパニヤ書","ハガイ書","ゼカリヤ書","マラキ書","マタイの福音書","マルコの福音書","ルカの福音書","ヨハネの福音書","使徒の働き","ローマ人への手紙","コリント人への手紙Ⅰ","コリント人への手紙Ⅱ","ガラテヤ人への手紙","エペソ人への手紙","ピリピ人への手紙","コロサイ人への手紙","テサロニケ人への手紙Ⅰ","テサロニケ人への手紙Ⅱ","テモテへの手紙Ⅰ","テモテへの手紙Ⅱ","テトスへの手紙","ピレモンへの手紙","ヘブル人への手紙","ヤコブの手紙","ペテロの手紙Ⅰ","ペテロの手紙Ⅱ","ヨハネの手紙Ⅰ","ヨハネの手紙Ⅱ","ヨハネの手紙Ⅲ","ユダの手紙","ヨハネの黙示録"],
+        RUS: ["Бытие","Исход","Левит","Числа","Второзаконие","Иисус Навин","Судьи","Руфь","1-я Царств","2-я Царств","3-я Царств","4-я Царств","1-я Паралипоменон","2-я Паралипоменон","Ездра","Неемия","Есфирь","Иов","Псалтирь","Притчи","Екклесиаст","Песня Песней","Исаия","Иеремия","Плач Иеремии","Иезекииль","Даниил","Осия","Иоиль","Амос","Авдий","Иона","Михей","Наум","Аввакум","Софония","Аггей","Захария","Малахия","От Матфея","От Марка","От Луки","От Иоанна","Деяния","К Римлянам","1-е Коринфянам","2-е Коринфянам","К Галатам","К Ефесянам","К Филиппийцам","К Колоссянам","1-е Фессалоникийцам","2-е Фессалоникийцам","1-е Тимофею","2-е Тимофею","К Титу","К Филимону","К Евреям","Иакова","1-е Петра","2-е Петра","1-е Иоанна","2-е Иоанна","3-е Иоанна","Иуды","Откровение"],
+        PHI: ["Genesis","Exodo","Levitico","Mga Bilang","Deuteronomio","Josue","Mga Hukom","Ruth","1 Samuel","2 Samuel","1 Mga Hari","2 Mga Hari","1 Mga Cronica","2 Mga Cronica","Ezra","Nehemias","Ester","Job","Mga Awit","Mga Kawikaan","Eclesiastes","Awit ng mga Awit","Isaias","Jeremias","Mga Panaghoy","Ezekiel","Daniel","Oseas","Joel","Amos","Obadias","Jonas","Mikas","Nahum","Habakuk","Zefanias","Hagai","Zacarias","Malakias","Mateo","Marcos","Lucas","Juan","Mga Gawa","Mga Taga-Roma","1 Mga Taga-Corinto","2 Mga Taga-Corinto","Mga Taga-Galacia","Mga Taga-Efeso","Mga Taga-Filipos","Mga Taga-Colosas","1 Mga Taga-Tesalonica","2 Mga Taga-Tesalonica","1 Timoteo","2 Timoteo","Tito","Filemon","Mga Hebreo","Santiago","1 Pedro","2 Pedro","1 Juan","2 Juan","3 Juan","Judas","Pahayag"],
+        IND: ["उत्पत्ति","निर्गमन","लैव्यव्यवस्था","गिनती","व्यवस्थाविवरण","यहोशू","न्यायियों","रूत","1 शमूएल","2 शमूएल","1 রাজা","2 राजा","1 इतिहास","2 इतिहास","एज्रा","नहेमायाह","एस्तेर","अय्यूब","भजन संहिता","नीतिवचन","सभोपदेशक","श्रेष्ठगीत","यशायाह","यिर्मयाह","विलापगीत","यहेजकेल","दानिय्येल","होशे","योएल","आमोस","ओबद्याह","योना","मीका","नहूम","हबक्कूक","सपन्याह","हाग्गै","जकर्याह","मलाकी","मत्ती","मरकुस","लूका","यूहन्ना","प्रेरितों के काम","रोमियों","1 कुरिन्थियों","2 कुरिन्थियों","गलातियों","इफिसियों","फिलिप्पियों","कुलुस्सियों","1 थिस्सलुनीकियों","2 थिस्सलुनीकियों","1 तीमुथियुस","2 तीमुथियुस","तीतुस","फिलेमोन","इब्रानियों","याकूब","1 पतरस","2 पतरस","1 यूहन्ना","2 यूहन्ना","3 यूहन्ना","यहूदा","प्रकाशितवाक्य"],
+        CAM: ["លោកុប្បត្តិ","និក្ខមនំ","លេវីវិន័យ","ជនគណនា","ចោទិយកថា","យ៉ូស្វេ","ចៅហ្វាយ","រស់","១ សាំយូអែល","២ សាំយូអែល","១ ពង្សាវតារក្សត្រ","២ ពង្សាវតារក្សត្រ","១ របាក្សត្រ","២ របាក្សត្រ","អែសរ៉ា","នេហេមា","អេសធើរ","យ៉ូប","ទំនុកតម្កើង","សុភាសិត","សាស្តា","បទចំរៀងសាឡូម៉ូន","អេសាយ","យេរេមា","បរិទេវ","អេសេគាល","ដានីយ៉ែល","ហូសេ","យ៉ូអែល","អាម៉ុស","អូបាឌា","យ៉ូណាស","មីកា","ណាហ៊ុម","ហាបាគុក","សេផានា","ហាកាយ","សាការី","ម៉ាឡាគី","ម៉ាថាយ","ម៉ាកុស","លូកា","យ៉ូហាន","កិច្ចការ","រ៉ូម","១ កូរិនថូស","២ កូរិនថូស","កាឡាទី","អេភេសូរ","ភីលីព","កូឡូស","១ ថែស្សាឡូនីច","២ ថែស្សាឡូនីច","១ ធីម៉ូថេ","២ ធីម៉ូថេ","ទីតុស","ភីលេម៉ូន","ហេព្រើរ","យ៉ាកុប","១ ពេត្រុស","២ ពេត្រុស","១ យ៉ូហាន"," ២ យ៉ូហាន","៣ យ៉ូហាន","យូដាស","វិវរណៈ"],
+        THA: ["ปฐมกาล","อพยพ","เลวีนิติ","กันดารวิถี","เฉลยธรรมบัญญัติ","โยชูวา","ผู้วินิจฉัย","นางรูธ","1 ซามูเอล","2 ซามูเอล","1 พงศ์กษัตริย์","2 พงศ์กษัตริย์","1 พงศาวดาร","2 พงศาวดาร","เอสรา","เนหะมีย์","เอสเธอร์","โยบ","สดุดี","สุภาษิต","ปัญญาจารย์","เพลงซาโลมอน","อิสยาห์","เยเรมีย์","เพลงคร่ำครวญ","เอเสเคียล","ดาเนียล","โฮเชยา","โยเอล","อาโมส","โอบาดีย์","โยนาห์","มีคาห์","นาฮูม","ฮาบากุก","เศฟันยาห์","ฮักกัย","เศคาริยาห์","มาลาคี","มัทธิว","มาระโก","ลูกา","ยอห์น","กิจการของอัครทูต","โรม","1 โครินธ์","2 โครินธ์","กาลาเทีย","เอเฟซัส","ฟีลิปปี","โคโลสี","1 เธสะโลนิกา","2 เธสะโลนิกา","1 ทิโมธี","2 ทิโมธี","ทิตัส","ฟีเลโมน","ฮีบรู","ยากอบ","1 เปโตร","2 เปโตร","1 ยอห์น","2 ยอห์น","3 ยอห์น","ยูดา","วิวรณ์"]
+    };
+
+    let sqlJsObject = null, selectedVersions = [], dbs = {}, bookNameMap = {}, bookSearchMap = {};
+
+    let pptSettings = {
+        fontFamily: "'Noto Sans KR', '맑은 고딕', sans-serif",
+        bodyFontSize: 45,
+        addressFontSize: 26,
+        lineHeight: 1.5,
+        align: 'left',
+        bgColor: '#000000',
+        textColor: '#ffffff',
+        bgImage: null
+    };
+    
+    let pptSlideDataStore = [];
+
+    const DOM = {
+        loadingOverlay: document.getElementById('loading-overlay'),
+        loadingText: document.getElementById('loading-text'),
+        loadingSpinner: document.getElementById('loading-spinner'),
+        manualLoadContainer: document.getElementById('manual-load-container'),
+        dbFileInput: document.getElementById('db-file-input'),
+        skipLoadBtn: document.getElementById('skip-load-btn'),
+        
+        mainApp: document.getElementById('main-app'),
+        sidebarVersionList: document.getElementById('sidebar-version-list'),
+        activeVersionsBadge: document.getElementById('active-versions-badge'),
+        versionWarning: document.getElementById('version-warning'),
+        
+        pptVerseInput: document.getElementById('ppt-verse-input'),
+        pptDisplayBtn: document.getElementById('ppt-display-btn'),
+        
+        pptPreviewDisplay: document.getElementById('ppt-preview-display'),
+        pptAddSlideBtn: document.getElementById('ppt-add-slide-btn'),
+        pptHlColor: document.getElementById('ppt-hl-color'),
+        pptHlBold: document.getElementById('ppt-hl-bold'),
+        
+        pptSlideCount: document.getElementById('ppt-slide-count'),
+        pptClearSlidesBtn: document.getElementById('ppt-clear-slides-btn'),
+        pptDownloadBtn: document.getElementById('ppt-download-btn'),
+        pptSlideList: document.getElementById('ppt-slide-list'),
+        
+        pptFontFamilySelect: document.getElementById('ppt-font-family-select'),
+        pptBodyFontSize: document.getElementById('ppt-body-font-size'),
+        pptAddrFontSize: document.getElementById('ppt-addr-font-size'),
+        pptLineHeight: document.getElementById('ppt-line-height'),
+        pptBgColorPicker: document.getElementById('ppt-bg-color-picker'),
+        pptTextColorPicker: document.getElementById('ppt-text-color-picker'),
+        pptBgImageUpload: document.getElementById('ppt-bg-image-upload'),
+        pptBgImageClear: document.getElementById('ppt-bg-image-clear'),
+        pptBgImagePreview: document.getElementById('ppt-bg-image-preview'),
+        pptAlignBtns: document.querySelectorAll('.ppt-align-btn')
+    };
+
+    const isElectron = typeof require !== 'undefined';
+    const fs = isElectron ? require('fs') : null;
+    const path = isElectron ? require('path') : null;
+
+    function loadSettings() {
+        const savedPpt = localStorage.getItem('pptSettings');
+        if (savedPpt) {
+            try {
+                const pset = JSON.parse(savedPpt);
+                if(pset.fontFamily) { pptSettings.fontFamily = pset.fontFamily; DOM.pptFontFamilySelect.value = pset.fontFamily; }
+                if(pset.bodyFontSize) { pptSettings.bodyFontSize = pset.bodyFontSize; DOM.pptBodyFontSize.value = pset.bodyFontSize; document.getElementById('ppt-body-font-val').innerText = pset.bodyFontSize + 'px'; }
+                if(pset.addressFontSize) { pptSettings.addressFontSize = pset.addressFontSize; DOM.pptAddrFontSize.value = pset.addressFontSize; document.getElementById('ppt-addr-font-val').innerText = pset.addressFontSize + 'px'; }
+                if(pset.lineHeight) { pptSettings.lineHeight = pset.lineHeight; DOM.pptLineHeight.value = pset.lineHeight; document.getElementById('ppt-line-height-val').innerText = pset.lineHeight; }
+                if(pset.align) { pptSettings.align = pset.align; updatePptAlignButtons(); }
+                if(pset.bgColor) { pptSettings.bgColor = pset.bgColor; DOM.pptBgColorPicker.value = pset.bgColor; }
+                if(pset.textColor) { pptSettings.textColor = pset.textColor; DOM.pptTextColorPicker.value = pset.textColor; }
+            } catch (e) {}
+        }
+    }
+
+    function saveSettings() {
+        const psetToSave = { ...pptSettings, bgImage: null };
+        localStorage.setItem('pptSettings', JSON.stringify(psetToSave));
+    }
+
+    loadSettings();
+
+    async function autoLoadAllDatabases() {
+        initBookMappings();
+        if (!sqlJsObject) {
+            try { 
+                sqlJsObject = await window.initSqlJs({ 
+                    locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/${file}` 
+                }); 
+            } 
+            catch(e) { alert("데이터베이스 엔진 초기화에 실패했습니다.\n" + e.message); return; }
+        }
+
+        let missingFiles = [];
+        const allVersionKeys = Object.keys(VERSION_INFO);
+
+        for (const vid of allVersionKeys) {
+            const info = VERSION_INFO[vid];
+            DOM.loadingText.innerText = `[${info.name}] 성경 데이터를 불러오는 중...`;
+            try {
+                let buffer;
+                if (isElectron && fs && path) {
+                    const filePath = path.join(__dirname, info.file);
+                    if (fs.existsSync(filePath)) buffer = fs.readFileSync(filePath);
+                    else throw new Error('File not found');
+                } else {
+                    const res = await fetch(info.file);
+                    if (!res.ok) throw new Error('File not found');
+                    buffer = await res.arrayBuffer();
+                }
+                await processDBBuffer(vid, buffer);
+            } catch (e) { missingFiles.push(vid); }
+        }
+
+        if (missingFiles.length > 0 && Object.keys(dbs).length === 0) {
+            DOM.loadingText.classList.add('hidden');
+            DOM.loadingSpinner.classList.add('hidden');
+            DOM.manualLoadContainer.classList.remove('hidden');
+        } else {
+            finishSetupProcess();
+        }
+    }
+
+    async function processDBBuffer(vid, arrayBuffer) {
+        const dbInstance = new sqlJsObject.Database(new Uint8Array(arrayBuffer));
+        let schema = { table: 'clause', book: 'book', chapter: 'chapter', verse: 'verse', text: 'text' };
+        const tablesRes = dbInstance.exec("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE 'android_%'");
+        if (tablesRes.length > 0) {
+            let validTables = tablesRes[0].values.map(v => v[0]).filter(n => !['info', 'metadata', 'details'].includes(n.toLowerCase()));
+            let targetTable = validTables.find(t => ['bible', 'verses', 'clause', 'book'].includes(t.toLowerCase())) || validTables[0];
+            if (targetTable) {
+                schema.table = targetTable;
+                const colRes = dbInstance.exec(`PRAGMA table_info("${targetTable}")`);
+                if (colRes.length > 0) {
+                    const cols = colRes[0].values.map(v => v[1]), lowerCols = cols.map(c => c.toLowerCase());
+                    const findCol = (cands) => { const f = cands.find(c => lowerCols.includes(c)); return f ? cols[lowerCols.indexOf(f)] : null; };
+                    schema.book = findCol(['book', 'b']) || cols[0];
+                    schema.chapter = findCol(['chapter', 'c']) || cols[1];
+                    schema.verse = findCol(['verse', 'v']) || cols[2];
+                    schema.text = findCol(['text', 'scripture', 't']) || cols[cols.length - 1]; 
+                }
+            }
+        }
+        dbs[vid] = { instance: dbInstance, schema: schema };
+    }
+
+    DOM.dbFileInput.addEventListener('change', async (e) => {
+        const files = Array.from(e.target.files);
+        if (!files.length) return;
+        
+        // 사이드바에서 DB 추가 시 로딩 UI 표시
+        DOM.manualLoadContainer.classList.add('hidden');
+        DOM.loadingOverlay.classList.remove('hidden');
+        DOM.loadingSpinner.classList.remove('hidden');
+        DOM.loadingText.classList.remove('hidden');
+        DOM.loadingText.innerText = "DB 파일 처리 중...";
+
+        let unloaded = Object.keys(VERSION_INFO).filter(vid => !dbs[vid]);
+        
+        for (const file of files) {
+            const fileName = file.name.toLowerCase();
+            let matchedVid = unloaded.find(vid => fileName.includes(VERSION_INFO[vid].name.toLowerCase()) || fileName.includes(VERSION_INFO[vid].file.toLowerCase().replace('.db','')));
+
+            if (matchedVid) {
+                DOM.loadingText.innerText = `[${VERSION_INFO[matchedVid].name}] 적용 중...`;
+                try {
+                    const buf = await file.arrayBuffer();
+                    await processDBBuffer(matchedVid, buf);
+                    unloaded = unloaded.filter(v => v !== matchedVid);
+                } catch(err) {}
+            }
+        }
+        
+        e.target.value = ''; // 동일 파일 재선택 가능하도록 초기화
+        finishSetupProcess();
+    });
+
+    DOM.skipLoadBtn.addEventListener('click', finishSetupProcess);
+
+    function finishSetupProcess() {
+        DOM.loadingOverlay.classList.add('hidden');
+        DOM.mainApp.classList.remove('hidden');
+        DOM.mainApp.classList.add('flex');
+        renderSidebarVersions();
+        window.addEventListener('resize', updatePptPreviewScale);
+    }
+
+    function renderSidebarVersions() {
+        DOM.sidebarVersionList.innerHTML = '';
+        const loadedKeys = Object.keys(dbs);
+        if (loadedKeys.length === 0) {
+            DOM.sidebarVersionList.innerHTML = '<p class="text-sm text-red-500">로드된 역본이 없습니다.</p>'; return;
+        }
+        
+        Object.keys(VERSION_INFO).forEach((key) => {
+            if(!dbs[key]) return;
+            const info = VERSION_INFO[key];
+            const index = loadedKeys.indexOf(key);
+            
+            const div = document.createElement('div');
+            div.className = 'flex items-center space-x-3 p-2 bg-white border border-slate-200 rounded-lg cursor-pointer hover:border-indigo-400 hover:bg-indigo-50 transition-colors shadow-sm';
+            const isChecked = index === 0 ? 'checked' : '';
+            div.innerHTML = `<input type="checkbox" id="chk-${key}" value="${key}" class="sidebar-version-checkbox w-4 h-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500 cursor-pointer" ${isChecked}><label for="chk-${key}" class="flex-1 cursor-pointer font-bold text-slate-700 text-sm select-none">${info.name}</label>`;
+            
+            div.addEventListener('click', (e) => { if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'LABEL') { const chk = div.querySelector('input'); chk.checked = !chk.checked; chk.dispatchEvent(new Event('change')); }});
+            div.querySelector('input').addEventListener('change', (e) => {
+                const checkedBoxes = document.querySelectorAll('.sidebar-version-checkbox:checked');
+                if (checkedBoxes.length > 4) { e.target.checked = false; DOM.versionWarning.classList.remove('hidden'); setTimeout(() => DOM.versionWarning.classList.add('hidden'), 2500); }
+                updateSelectedVersions();
+            });
+            DOM.sidebarVersionList.appendChild(div);
+        });
+        updateSelectedVersions();
+    }
+
+    function updateSelectedVersions() {
+        selectedVersions = Array.from(document.querySelectorAll('.sidebar-version-checkbox:checked')).map(chk => chk.value);
+        DOM.activeVersionsBadge.innerHTML = selectedVersions.map(vid => `<span class="px-2 py-0.5 text-[10px] font-bold rounded bg-slate-100 text-slate-600 border border-slate-200">${VERSION_INFO[vid].name}</span>`).join('');
+        const inputStr = DOM.pptVerseInput.value;
+        if(inputStr && document.getElementById('current-ppt-slide')) {
+            DOM.pptDisplayBtn.click();
+        }
+    }
+
+    function initBookMappings() {
+        const books = `1,창세기,창\n2,출애굽기,출\n3,레위기,레\n4,민수기,민\n5,신명기,신\n6,여호수아,수\n7,사사기,삿\n8,룻기,룻\n9,사무엘상,삼상\n10,사무엘하,삼하\n11,열왕기상,왕상\n12,열왕기하,왕하\n13,역대상,대상\n14,역대하,대하\n15,에스라,스\n16,느헤미야,느\n17,에스더,에\n18,욥기,욥\n19,시편,시\n20,잠언,잠\n21,전도서,전\n22,아가,아\n23,이사야,사\n24,예레미야,렘\n25,예레미야애가,애\n26,에스겔,겔\n27,다니엘,단\n28,호세아,호\n29,요엘,욜\n30,아모스,암\n31,오바댜,옵\n32,요나,욘\n33,미가,미\n34,나훔,나\n35,하박국,합\n36,스바냐,습\n37,학개,학\n38,스가랴,슥\n39,말라기,말\n40,마태복음,마\n41,마가복음,막\n42,누가복음,눅\n43,요한복음,요\n44,사도행전,행\n45,로마서,롬\n46,고린도전서,고전\n47,고린도후서,고후\n48,갈라디아서,갈\n49,에베소서,엡\n50,빌립보서,빌\n51,골로새서,골\n52,데살로니가전서,살전\n53,데살로니가후서,살후\n54,디모데전서,딤전\n55,디모데후서,딤후\n56,디도서,딛\n57,빌레몬서,몬\n58,히브리서,히\n59,야고보서,약\n60,베드로전서,벧전\n61,베드로후서,벧후\n62,요한1서,요일\n63,요한2서,요이\n64,요한3서,요삼\n65,유다서,유\n66,요한계시록,계`;
+        books.split('\n').forEach(row => {
+            const [idStr, fullName, shortName] = row.split(',');
+            if (idStr && fullName && shortName) {
+                const id = parseInt(idStr, 10);
+                bookNameMap[id] = { n: fullName.trim(), a: shortName.trim() };
+                bookSearchMap[fullName.trim().toLowerCase()] = id;
+                bookSearchMap[shortName.trim().toLowerCase()] = id;
+            }
+        });
+    }
+
+    function parseVerseQuery(query) {
+        query = query.trim().toLowerCase();
+        const match = query.match(/^([가-힣a-zA-Z\d]+?)[\s\.]*(\d+)[\s]*[장:\.]?(?:[\s]*(\d+)[절]?(?:[\s\-~]*(\d+)[절]?)?)?$/);
+        if (!match) return null;
+        const bookStr = match[1], ch = parseInt(match[2], 10);
+        let startV = parseInt(match[3], 10);
+        let endV = match[4] ? parseInt(match[4], 10) : startV;
+        const bookId = bookSearchMap[bookStr];
+        if (!bookId || isNaN(ch)) return null;
+
+        let isWholeChapter = false;
+        if (isNaN(startV)) {
+            isWholeChapter = true;
+            startV = 1;
+            endV = 999;
+        }
+
+        return { id: bookId, n: bookNameMap[bookId].n, c: ch, s: startV, e: endV, isWholeChapter: isWholeChapter };
+    }
+
+    function fetchVerses(parsed) {
+        if (!selectedVersions.length || !dbs[selectedVersions[0]]) return null;
+        const mainVid = selectedVersions[0], mainDb = dbs[mainVid], ms = mainDb.schema;
+        try {
+            const query = `SELECT "${ms.verse}" as verse, "${ms.text}" as text FROM "${ms.table}" WHERE "${ms.book}" = :b AND "${ms.chapter}" = :c AND "${ms.verse}" >= :s AND "${ms.verse}" <= :e ORDER BY "${ms.verse}"`;
+            const stmt = mainDb.instance.prepare(query);
+            stmt.bind({ ':b': parsed.id, ':c': parsed.c, ':s': parsed.s, ':e': parsed.e });
+            const resultsMap = new Map(), orderedVerses = [];
+            while (stmt.step()) {
+                const row = stmt.getAsObject(), vNum = row.verse;
+                const obj = { book: parsed.id, chapter: parsed.c, verse: vNum, texts: {} };
+                obj.texts[mainVid] = row.text;
+                resultsMap.set(vNum, obj);
+                orderedVerses.push(vNum);
+            }
+            stmt.free();
+            if (orderedVerses.length === 0) return null;
+
+            for (let i = 1; i < selectedVersions.length; i++) {
+                const vid = selectedVersions[i], subDb = dbs[vid], ss = subDb.schema;
+                const subQuery = `SELECT "${ss.verse}" as verse, "${ss.text}" as text FROM "${ss.table}" WHERE "${ss.book}" = :b AND "${ss.chapter}" = :c AND "${ss.verse}" >= :s AND "${ss.verse}" <= :e`;
+                const subStmt = subDb.instance.prepare(subQuery);
+                subStmt.bind({ ':b': parsed.id, ':c': parsed.c, ':s': parsed.s, ':e': parsed.e });
+                while(subStmt.step()) { const row = subStmt.getAsObject(); if(resultsMap.has(row.verse)) resultsMap.get(row.verse).texts[vid] = row.text; }
+                subStmt.free();
+            }
+            
+            const realStart = orderedVerses[0];
+            const realEnd = orderedVerses[orderedVerses.length - 1];
+            let address = "";
+            if (parsed.isWholeChapter) {
+                address = `${parsed.n} ${parsed.c}장`;
+            } else {
+                address = realStart === realEnd ? `${parsed.n} ${parsed.c}:${realStart}` : `${parsed.n} ${parsed.c}:${realStart}-${realEnd}`;
+            }
+
+            return { v: orderedVerses.map(v => resultsMap.get(v)), a: address, isWholeChapter: parsed.isWholeChapter };
+        } catch (e) { return null; }
+    }
+    
+    DOM.pptDisplayBtn.addEventListener('click', () => {
+        const inputStr = DOM.pptVerseInput.value;
+        if (!inputStr) return;
+        const parsed = parseVerseQuery(inputStr);
+        if (!parsed) { DOM.pptPreviewDisplay.innerHTML = '<div class="absolute inset-0 flex items-center justify-center text-rose-500 font-bold z-0 pointer-events-none text-lg">입력 형식이 올바르지 않습니다. (예: 요 3:16)</div>'; return; }
+        const res = fetchVerses(parsed);
+        if (!res || !res.v.length) { DOM.pptPreviewDisplay.innerHTML = '<div class="absolute inset-0 flex items-center justify-center text-rose-500 font-bold z-0 pointer-events-none text-lg">해당 말씀을 찾을 수 없습니다.</div>'; return; }
+        
+        renderToPptPreview(res);
+    });
+    DOM.pptVerseInput.addEventListener('keyup', e => { if (e.key === 'Enter') DOM.pptDisplayBtn.click(); });
+
+    function updatePptPreviewScale() {
+        const wrapper = document.getElementById('ppt-preview-display');
+        const slide = document.getElementById('current-ppt-slide');
+        if (!wrapper || !slide) return;
+        const wWidth = wrapper.clientWidth;
+        const wHeight = wrapper.clientHeight;
+        const scaleX = wWidth / 1280;
+        const scaleY = wHeight / 720;
+        const scale = Math.min(scaleX, scaleY) * 0.95; 
+        slide.style.transform = `scale(${scale})`;
+    }
+
+    function updatePptPreviewStyle() {
+        const slide = document.getElementById('current-ppt-slide');
+        const address = document.getElementById('ppt-slide-address');
+        const content = document.getElementById('ppt-editable-content');
+        
+        if(slide) {
+            slide.style.fontFamily = pptSettings.fontFamily;
+            slide.style.backgroundColor = pptSettings.bgColor;
+            slide.style.color = pptSettings.textColor;
+            slide.style.fontSize = `${pptSettings.bodyFontSize}px`;
+            slide.style.lineHeight = pptSettings.lineHeight;
+            if (pptSettings.bgImage) {
+                slide.style.backgroundImage = `url(${pptSettings.bgImage})`;
+                slide.style.backgroundSize = 'cover';
+                slide.style.backgroundPosition = 'center';
+            } else { slide.style.backgroundImage = 'none'; }
+        }
+        if(address) address.style.fontSize = `${pptSettings.addressFontSize}px`;
+        if(content) content.style.textAlign = pptSettings.align;
+    }
+
+    function updatePptAlignButtons() {
+        DOM.pptAlignBtns.forEach(btn => {
+            if (btn.dataset.align === pptSettings.align) {
+                btn.classList.replace('bg-white', 'bg-indigo-50');
+                btn.classList.replace('border-slate-300', 'border-indigo-500');
+                btn.classList.replace('text-slate-600', 'text-indigo-700');
+                btn.classList.remove('hover:bg-slate-50');
+            } else {
+                btn.classList.replace('bg-indigo-50', 'bg-white');
+                btn.classList.replace('border-indigo-500', 'border-slate-300');
+                btn.classList.replace('text-indigo-700', 'text-slate-600');
+                btn.classList.add('hover:bg-slate-50');
+            }
+        });
+    }
+
+    function renderToPptPreview(resData) {
+        const vid = selectedVersions[0];
+        const nameArr = FULL_BOOK_NAMES[vid] || FULL_BOOK_NAMES['ENG'];
+        let bookName = (vid === 'KOR') ? bookNameMap[resData.v[0].book].n : nameArr[resData.v[0].book - 1];
+        if (!bookName) bookName = bookNameMap[resData.v[0].book].n;
+        
+        const firstV = resData.v[0].verse;
+        const lastV = resData.v[resData.v.length - 1].verse;
+        
+        let addressText = "";
+        if (resData.isWholeChapter) {
+            addressText = `${bookName} ${resData.v[0].chapter}장`;
+        } else {
+            addressText = firstV === lastV ? `${bookName} ${resData.v[0].chapter}장 ${firstV}절` : `${bookName} ${resData.v[0].chapter}장 ${firstV}-${lastV}절`;
+        }
+
+        let contentHtml = "";
+        resData.v.forEach((v, index) => {
+            selectedVersions.forEach(vid => {
+                if (v.texts[vid]) {
+                    const isMain = vid === selectedVersions[0];
+                    const fontSizePct = isMain ? '1em' : '0.8em';
+                    const colorClass = isMain ? 'font-bold' : 'opacity-85 font-medium';
+                    contentHtml += `<div style="margin-bottom: 0.2em; font-size: ${fontSizePct}; word-break: keep-all;" class="${colorClass}"><span>${v.texts[vid]}</span></div>`;
+                }
+            });
+            if (index < resData.v.length - 1) contentHtml += `<div style="height: 0.5em;"></div>`;
+        });
+
+        const bgImgStyle = pptSettings.bgImage ? `background-image: url(${pptSettings.bgImage}); background-size: cover; background-position: center;` : '';
+
+        const slideHtml = `
+            <div id="ppt-scale-wrapper" class="absolute inset-0 flex items-center justify-center overflow-hidden pointer-events-none">
+                <div id="current-ppt-slide" class="shadow-2xl relative pointer-events-auto" style="width: 1280px; height: 720px; background-color: ${pptSettings.bgColor}; ${bgImgStyle} color: ${pptSettings.textColor}; font-family: ${pptSettings.fontFamily}; font-size: ${pptSettings.bodyFontSize}px; line-height: ${pptSettings.lineHeight}; flex-shrink: 0; transform-origin: center center;">
+                    <div id="ppt-slide-address" contenteditable="true" style="position: absolute; top: 8%; right: 6%; font-size: ${pptSettings.addressFontSize}px; opacity: 0.85; text-align: right; z-index: 10; font-weight: bold; outline: none; border-bottom: 1px dashed transparent; padding: 2px 5px;" onfocus="this.style.borderColor='rgba(255,255,255,0.5)'" onblur="this.style.borderColor='transparent'">
+                        ${addressText}
+                    </div>
+                    <div style="position: absolute; top: 15%; bottom: 10%; left: 8%; right: 8%; display: flex; flex-direction: column; justify-content: center;">
+                        <div id="ppt-editable-content" contenteditable="true" style="outline: none; cursor: text; max-height: 100%; overflow-y: auto; padding-right: 10px; width: 100%; text-align: ${pptSettings.align};">
+                            ${contentHtml}
+                        </div>
+                    </div>
+                </div>
+            </div>`;
+        
+        DOM.pptPreviewDisplay.innerHTML = slideHtml;
+        updatePptPreviewScale();
+    }
+
+    function getHexColor(colorStr) {
+        if (!colorStr) return '';
+        if (colorStr.startsWith('#')) return colorStr.toLowerCase();
+        const match = colorStr.match(/\d+/g);
+        if (match && match.length >= 3) return '#' + ((1 << 24) + (parseInt(match[0]) << 16) + (parseInt(match[1]) << 8) + parseInt(match[2])).toString(16).slice(1).toLowerCase();
+        return '';
+    }
+
+    DOM.pptPreviewDisplay.addEventListener('mouseup', () => {
+        const sel = window.getSelection();
+        if (sel.isCollapsed) return;
+        document.execCommand('styleWithCSS', false, true);
+
+        const targetColorHex = DOM.pptHlColor.value.toLowerCase();
+        const targetBold = DOM.pptHlBold.checked;
+        const baseColorHex = pptSettings.textColor.toLowerCase();
+
+        let currentColor = document.queryCommandValue('foreColor');
+        let currentHex = getHexColor(currentColor);
+        let isCurrentlyBold = document.queryCommandState('bold');
+
+        let shouldRevert = false;
+        if (targetBold) { if (isCurrentlyBold) shouldRevert = true; } 
+        else { if (currentHex === targetColorHex) shouldRevert = true; }
+
+        if (shouldRevert) {
+            if (targetBold) document.execCommand('bold', false, null);
+            document.execCommand('foreColor', false, baseColorHex);
+        } else {
+            if (targetBold && !isCurrentlyBold) document.execCommand('bold', false, null);
+            document.execCommand('foreColor', false, targetColorHex);
+        }
+        sel.removeAllRanges();
+    });
+
+    DOM.pptAddSlideBtn.addEventListener('click', () => {
+        const slideEl = document.getElementById('current-ppt-slide');
+        if (!slideEl) { alert('먼저 구절을 검색해 주세요.'); return; }
+
+        const addressEl = document.getElementById('ppt-slide-address');
+        const contentEl = document.getElementById('ppt-editable-content');
+        
+        pptSlideDataStore.push({
+            addressText: addressEl ? addressEl.innerText : '',
+            contentHtml: contentEl ? contentEl.innerHTML : '',
+            fullHtml: slideEl.outerHTML, 
+            bgColor: pptSettings.bgColor,
+            textColor: pptSettings.textColor,
+            bgImage: pptSettings.bgImage,
+            fontFamily: pptSettings.fontFamily,
+            lineHeight: pptSettings.lineHeight,
+            bodyFontSize: pptSettings.bodyFontSize,
+            addressFontSize: pptSettings.addressFontSize,
+            align: pptSettings.align
+        });
+        updatePptSlideList();
+        
+        const origText = DOM.pptAddSlideBtn.innerHTML;
+        DOM.pptAddSlideBtn.innerHTML = '✅ 담기 완료!';
+        DOM.pptAddSlideBtn.classList.replace('bg-indigo-600', 'bg-emerald-600');
+        setTimeout(() => {
+            DOM.pptAddSlideBtn.innerHTML = origText;
+            DOM.pptAddSlideBtn.classList.replace('bg-emerald-600', 'bg-indigo-600');
+        }, 1000);
+    });
+
+    function updatePptSlideList() {
+        DOM.pptSlideCount.innerText = pptSlideDataStore.length;
+        DOM.pptSlideList.innerHTML = '';
+        if (pptSlideDataStore.length === 0) { DOM.pptSlideList.innerHTML = '<span class="text-slate-400 text-sm w-full text-center">담아둔 슬라이드가 없습니다.</span>'; return; }
+
+        pptSlideDataStore.forEach((slide, idx) => {
+            const thumb = document.createElement('div');
+            thumb.className = 'h-full aspect-video bg-white border border-slate-300 rounded-lg shadow-sm relative overflow-hidden shrink-0 flex items-center justify-center cursor-pointer hover:border-indigo-500 hover:shadow-md transition-all';
+            
+            const previewWrap = document.createElement('div');
+            previewWrap.style.transform = 'scale(0.12)';
+            previewWrap.style.transformOrigin = 'center center';
+            previewWrap.style.width = '1280px'; 
+            previewWrap.style.height = '720px';
+            previewWrap.style.display = 'flex';
+            previewWrap.style.alignItems = 'center';
+            previewWrap.style.justifyContent = 'center';
+            
+            const slideClone = document.createElement('div');
+            slideClone.innerHTML = slide.fullHtml;
+            const innerSlide = slideClone.querySelector('#current-ppt-slide');
+            if(innerSlide) { innerSlide.style.transform = 'none'; previewWrap.appendChild(innerSlide); }
+
+            const editableInThumb = previewWrap.querySelector('#ppt-editable-content');
+            if(editableInThumb) editableInThumb.setAttribute('contenteditable', 'false');
+            
+            const delBtn = document.createElement('button');
+            delBtn.innerHTML = '×';
+            delBtn.className = 'absolute top-1.5 right-1.5 bg-rose-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold hover:bg-rose-600 z-10 shadow';
+            delBtn.onclick = (e) => { e.stopPropagation(); pptSlideDataStore.splice(idx, 1); updatePptSlideList(); };
+            
+            const badge = document.createElement('div');
+            badge.className = 'absolute bottom-1.5 left-1.5 bg-slate-800 bg-opacity-70 text-white text-[11px] font-bold px-2 py-0.5 rounded z-10';
+            badge.innerText = `${idx + 1}`;
+
+            thumb.appendChild(previewWrap);
+            thumb.appendChild(delBtn);
+            thumb.appendChild(badge);
+            DOM.pptSlideList.appendChild(thumb);
+        });
+    }
+
+    DOM.pptClearSlidesBtn.addEventListener('click', () => {
+        if(pptSlideDataStore.length > 0 && confirm('보관함에 있는 모든 슬라이드를 삭제하시겠습니까?')) {
+            pptSlideDataStore = []; updatePptSlideList();
+        }
+    });
+
+    DOM.pptDownloadBtn.addEventListener('click', async () => {
+        if (pptSlideDataStore.length === 0) { alert('생성할 슬라이드가 없습니다. 구절을 검색하고 담아주세요.'); return; }
+        
+        const originalText = DOM.pptDownloadBtn.innerHTML;
+        DOM.pptDownloadBtn.innerHTML = '⏳ 생성 중...';
+        DOM.pptDownloadBtn.disabled = true;
+
+        try {
+            let PptxClass = window.pptxgen || window.PptxGenJS;
+            if (!PptxClass) throw new Error('PPT 생성 라이브러리를 찾을 수 없습니다.');
+
+            let pptx = new PptxClass();
+            pptx.layout = 'LAYOUT_16x9';
+
+            pptSlideDataStore.forEach(slide => {
+                let s = pptx.addSlide();
+                if (slide.bgImage) { s.background = { data: slide.bgImage }; } 
+                else { s.background = { color: slide.bgColor.replace('#', '') }; }
+                
+                if (slide.addressText) {
+                    s.addText(slide.addressText, {
+                        x: '50%', y: '8%', w: '44%', h: '10%', align: 'right', valign: 'top',
+                        color: slide.textColor.replace('#', ''),
+                        fontFace: slide.fontFamily.replace(/['"]/g, '').split(',')[0].trim(),
+                        fontSize: Math.round(slide.addressFontSize * 0.75),
+                        bold: true
+                    });
+                }
+
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = slide.contentHtml;
+                tempDiv.style.position = 'absolute'; tempDiv.style.opacity = '0.01'; tempDiv.style.pointerEvents = 'none';
+                tempDiv.style.width = '1280px'; tempDiv.style.fontFamily = slide.fontFamily;
+                tempDiv.style.color = slide.textColor; tempDiv.style.fontSize = slide.bodyFontSize + 'px'; 
+                tempDiv.style.lineHeight = slide.lineHeight; tempDiv.style.textAlign = slide.align;
+                document.body.appendChild(tempDiv);
+                
+                let textArray = [];
+                function parseNode(node, currentOpts) {
+                    if (node.nodeType === Node.TEXT_NODE) {
+                        const textVal = node.nodeValue.replace(/[\r\n]+/g, ''); 
+                        if (textVal !== '') textArray.push({ text: textVal, options: { ...currentOpts } });
+                    } else if (node.nodeType === Node.ELEMENT_NODE) {
+                        let newOpts = { ...currentOpts };
+                        const tag = node.nodeName.toUpperCase();
+                        const style = window.getComputedStyle(node);
+                        
+                        if (style.fontWeight === 'bold' || parseInt(style.fontWeight) >= 700 || tag === 'B' || tag === 'STRONG') newOpts.bold = true;
+                        if (style.color) { let hex = getHexColor(style.color); if (hex) newOpts.color = hex.replace('#', ''); }
+                        if (style.fontSize) { let px = parseFloat(style.fontSize); newOpts.fontSize = Math.round(px * 0.75); }
+                        if (style.verticalAlign === 'super') newOpts.superscript = true;
+
+                        const isBlock = (style.display === 'block' || tag === 'DIV' || tag === 'P');
+                        if (isBlock && textArray.length > 0) { if (!textArray[textArray.length - 1].options.breakLine) textArray[textArray.length - 1].options.breakLine = true; }
+
+                        if (tag === 'BR') {
+                            if (textArray.length > 0) textArray[textArray.length - 1].options.breakLine = true;
+                            else textArray.push({ text: ' ', options: { ...newOpts, breakLine: true } });
+                            return;
+                        }
+                        
+                        Array.from(node.childNodes).forEach(child => parseNode(child, newOpts));
+                        if (isBlock && textArray.length > 0) { if (!textArray[textArray.length - 1].options.breakLine) textArray[textArray.length - 1].options.breakLine = true; }
+                    }
+                }
+                
+                const defaultOpts = { 
+                    fontFace: slide.fontFamily.replace(/['"]/g, '').split(',')[0].trim(), 
+                    fontSize: Math.round(slide.bodyFontSize * 0.75), color: slide.textColor.replace('#', '') 
+                };
+                
+                parseNode(tempDiv, defaultOpts);
+                document.body.removeChild(tempDiv); 
+
+                textArray = textArray.filter((t, i) => {
+                    if ((t.text === '' || t.text === ' ') && t.options.breakLine && i > 0 && textArray[i-1].options.breakLine) return false;
+                    return true;
+                });
+                if (textArray.length === 0) textArray.push({ text: ' ', options: defaultOpts });
+
+                s.addText(textArray.length > 0 ? textArray : [{ text: ' ', options: defaultOpts }], { 
+                    x: '8%', y: '15%', w: '84%', h: '75%', valign: 'middle', align: slide.align, margin: 0,
+                    lineSpacing: slide.lineHeight ? parseFloat(slide.lineHeight) * 35 : 45 
+                });
+            });
+
+            const fileName = `Bible_PPT_${new Date().toISOString().slice(0,10)}.pptx`;
+            await pptx.writeFile({ fileName: fileName });
+            
+        } catch (err) { alert('PPT 생성 중 오류가 발생했습니다.\n' + err.message); } 
+        finally { DOM.pptDownloadBtn.innerHTML = originalText; DOM.pptDownloadBtn.disabled = false; }
+    });
+
+    DOM.pptFontFamilySelect.addEventListener('change', (e) => { pptSettings.fontFamily = e.target.value; updatePptPreviewStyle(); saveSettings(); });
+    DOM.pptBodyFontSize.addEventListener('input', (e) => { pptSettings.bodyFontSize = parseInt(e.target.value); document.getElementById('ppt-body-font-val').innerText = pptSettings.bodyFontSize + 'px'; updatePptPreviewStyle(); saveSettings(); });
+    DOM.pptAddrFontSize.addEventListener('input', (e) => { pptSettings.addressFontSize = parseInt(e.target.value); document.getElementById('ppt-addr-font-val').innerText = pptSettings.addressFontSize + 'px'; updatePptPreviewStyle(); saveSettings(); });
+    DOM.pptLineHeight.addEventListener('input', (e) => { pptSettings.lineHeight = e.target.value; document.getElementById('ppt-line-height-val').innerText = pptSettings.lineHeight; updatePptPreviewStyle(); saveSettings(); });
+    DOM.pptBgColorPicker.addEventListener('input', (e) => { pptSettings.bgColor = e.target.value; updatePptPreviewStyle(); saveSettings(); });
+    DOM.pptTextColorPicker.addEventListener('input', (e) => { pptSettings.textColor = e.target.value; updatePptPreviewStyle(); saveSettings(); });
+    
+    DOM.pptAlignBtns.forEach(btn => { btn.addEventListener('click', (e) => { pptSettings.align = e.target.dataset.align; updatePptAlignButtons(); updatePptPreviewStyle(); saveSettings(); }); });
+
+    DOM.pptBgImageUpload.addEventListener('change', e => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = event => {
+                pptSettings.bgImage = event.target.result; updatePptPreviewStyle();
+                DOM.pptBgImagePreview.src = pptSettings.bgImage; DOM.pptBgImagePreview.classList.remove('hidden'); DOM.pptBgImageClear.classList.remove('hidden');
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+
+    DOM.pptBgImageClear.addEventListener('click', () => {
+        pptSettings.bgImage = null; DOM.pptBgImageUpload.value = ''; updatePptPreviewStyle();
+        DOM.pptBgImagePreview.classList.add('hidden'); DOM.pptBgImageClear.classList.add('hidden');
+    });
+
+    // === 최초 시작 (보안 체크) ===
+    checkAuth();
+})();
+</script>
+</body>
+</html>
